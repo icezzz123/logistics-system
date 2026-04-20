@@ -1,0 +1,2334 @@
+﻿{
+    "info":  {
+                 "_postman_id":  "logistics-system-api-regression",
+                 "name":  "Logistics System API - Regression",
+                 "description":  "跨境物流作业系统回归联调集合，覆盖用户、订单、站点、仓储、分拣、运输、追踪、异常、调度等核心链路。",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "auth":  {
+                 "type":  "bearer",
+                 "bearer":  [
+                                {
+                                    "key":  "token",
+                                    "value":  "{{auth_token}}",
+                                    "type":  "string"
+                                }
+                            ]
+             },
+    "variable":  [
+                     {
+                         "key":  "base_url",
+                         "value":  "http://localhost:8080",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "auth_token",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "admin_username",
+                         "value":  "postman_admin",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "admin_password",
+                         "value":  "Pass1234",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "driver_id",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "manager_id",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "origin_station_id",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "dest_station_id",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "order_id",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "order_no",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "warehouse_order_id",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "warehouse_order_no",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "station_id",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "vehicle_id",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "sorting_rule_id",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "sorting_task_id",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "transport_task_id",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "tracking_record_id",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "exception_id",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "batch_schedule_id",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "transport_plan_id",
+                         "value":  "",
+                         "type":  "string"
+                     }
+                 ],
+    "item":  [
+                 {
+                     "name":  "Authentication \u0026 Users",
+                     "item":  [
+                                  {
+                                      "name":  "Register Admin",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/auth/register",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "auth",
+                                                                               "register"
+                                                                           ]
+                                                              },
+                                                      "auth":  {
+                                                                   "type":  "noauth"
+                                                               },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"username\": \"{{admin_username}}\",\n  \"password\": \"{{admin_password}}\",\n  \"email\": \"postman_admin@test.local\",\n  \"phone\": \"13812345678\",\n  \"real_name\": \"Postman管理员\",\n  \"role\": 7\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                                                                                "pm.expect(pm.response.json().code).to.eql(200);"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Register Driver",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/auth/register",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "auth",
+                                                                               "register"
+                                                                           ]
+                                                              },
+                                                      "auth":  {
+                                                                   "type":  "noauth"
+                                                               },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"username\": \"postman_driver_{{$timestamp}}\",\n  \"password\": \"Pass1234\",\n  \"email\": \"postman_driver@test.local\",\n  \"phone\": \"13812345679\",\n  \"real_name\": \"Postman司机\",\n  \"role\": 4\n}"
+                                                               }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "var jsonData = pm.response.json();",
+                                                                                    "pm.collectionVariables.set(\"driver_id\", jsonData.data.id);",
+                                                                                    "pm.test(\"Driver registered\", function () { pm.expect(jsonData.code).to.eql(200); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Register Site Manager",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/auth/register",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "auth",
+                                                                               "register"
+                                                                           ]
+                                                              },
+                                                      "auth":  {
+                                                                   "type":  "noauth"
+                                                               },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"username\": \"postman_manager_{{$timestamp}}\",\n  \"password\": \"Pass1234\",\n  \"email\": \"postman_manager@test.local\",\n  \"phone\": \"13812345680\",\n  \"real_name\": \"Postman站点管理员\",\n  \"role\": 5\n}"
+                                                               }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "var jsonData = pm.response.json();",
+                                                                                    "pm.collectionVariables.set(\"manager_id\", jsonData.data.id);",
+                                                                                    "pm.test(\"Manager registered\", function () { pm.expect(jsonData.code).to.eql(200); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Login Admin",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/auth/login",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "auth",
+                                                                               "login"
+                                                                           ]
+                                                              },
+                                                      "auth":  {
+                                                                   "type":  "noauth"
+                                                               },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"username\": \"{{admin_username}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "var jsonData = pm.response.json();",
+                                                                                "pm.test(\"Login success\", function () { pm.expect(jsonData.code).to.eql(200); pm.expect(jsonData.data).to.have.property(\"token\"); });",
+                                                                                "pm.collectionVariables.set(\"auth_token\", jsonData.data.token);"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Profile",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/profile",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "profile"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Profile success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Permissions",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/permissions",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "permissions"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Permissions success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get User List",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/users",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "users"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"User list success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Stations",
+                     "item":  [
+                                  {
+                                      "name":  "Create Origin Station",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/stations",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "stations"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"station_code\": \"POSTMAN-ST-ORIGIN\",\n  \"name\": \"Postman始发站\",\n  \"type\": 1,\n  \"country\": \"中国\",\n  \"province\": \"上海\",\n  \"city\": \"上海\",\n  \"address\": \"浦东新区测试路1号\",\n  \"latitude\": 31.2304,\n  \"longitude\": 121.4737,\n  \"capacity\": 1000,\n  \"contact_name\": \"测试联系人A\",\n  \"contact_phone\": \"13800000001\",\n  \"working_hours\": \"09:00-18:00\",\n  \"remark\": \"Postman回归始发站\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "var jsonData = pm.response.json();",
+                                                                                "pm.collectionVariables.set(\"origin_station_id\", jsonData.data.id);",
+                                                                                "pm.collectionVariables.set(\"station_id\", jsonData.data.id);",
+                                                                                "pm.test(\"Origin station created\", function () { pm.expect(jsonData.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Create Destination Station",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/stations",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "stations"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"station_code\": \"POSTMAN-ST-DEST\",\n  \"name\": \"Postman目的站\",\n  \"type\": 3,\n  \"country\": \"中国\",\n  \"province\": \"江苏\",\n  \"city\": \"苏州\",\n  \"address\": \"工业园区测试路8号\",\n  \"latitude\": 31.2989,\n  \"longitude\": 120.5853,\n  \"capacity\": 1000,\n  \"contact_name\": \"测试联系人B\",\n  \"contact_phone\": \"13800000002\",\n  \"working_hours\": \"09:00-18:00\",\n  \"remark\": \"Postman回归目的站\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "var jsonData = pm.response.json();",
+                                                                                "pm.collectionVariables.set(\"dest_station_id\", jsonData.data.id);",
+                                                                                "pm.test(\"Destination station created\", function () { pm.expect(jsonData.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Station List",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/stations?page=1\u0026page_size=20",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "stations"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Station list success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Station Detail",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/stations/{{origin_station_id}}",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "stations",
+                                                                               "{{origin_station_id}}"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Station detail success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Orders \u0026 Warehouse",
+                     "item":  [
+                                  {
+                                      "name":  "Create Warehouse Order",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/orders",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "orders"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"sender_name\": \"仓储测试发件人\",\n  \"sender_phone\": \"13800000011\",\n  \"sender_country\": \"中国\",\n  \"sender_province\": \"上海\",\n  \"sender_city\": \"上海\",\n  \"sender_address\": \"仓储测试地址1号\",\n  \"sender_postcode\": \"200000\",\n  \"receiver_name\": \"仓储测试收件人\",\n  \"receiver_phone\": \"13900000011\",\n  \"receiver_country\": \"中国\",\n  \"receiver_province\": \"江苏\",\n  \"receiver_city\": \"苏州\",\n  \"receiver_address\": \"仓储测试地址8号\",\n  \"receiver_postcode\": \"215000\",\n  \"goods_name\": \"仓储回归测试货物\",\n  \"goods_category\": \"文件\",\n  \"goods_weight\": 4.2,\n  \"goods_volume\": 0.4,\n  \"goods_quantity\": 1,\n  \"goods_value\": 100,\n  \"transport_mode\": 3,\n  \"service_type\": \"standard\",\n  \"remark\": \"仓储回归测试订单\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "var jsonData = pm.response.json();",
+                                                                                "pm.collectionVariables.set(\"warehouse_order_id\", jsonData.data.order_id);",
+                                                                                "pm.collectionVariables.set(\"warehouse_order_no\", jsonData.data.order_no);",
+                                                                                "pm.test(\"Warehouse order created\", function () { pm.expect(jsonData.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Accept Warehouse Order",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/orders/{{warehouse_order_id}}/status",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "orders",
+                                                                               "{{warehouse_order_id}}",
+                                                                               "status"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"status\": 2,\n  \"remark\": \"Postman推进到已接单\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Warehouse order accepted\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Inbound Scan",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/warehouse/inbound",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "warehouse",
+                                                                               "inbound"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"order_no\": \"{{warehouse_order_no}}\",\n  \"station_id\": {{origin_station_id}},\n  \"remark\": \"Postman入库\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Inbound success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Inbound Records",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/warehouse/inbound/records?page=1\u0026page_size=10\u0026order_no={{warehouse_order_no}}",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "warehouse",
+                                                                               "inbound",
+                                                                               "records"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Inbound records success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Outbound Scan",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/warehouse/outbound",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "warehouse",
+                                                                               "outbound"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"order_no\": \"{{warehouse_order_no}}\",\n  \"station_id\": {{origin_station_id}},\n  \"next_station_id\": {{dest_station_id}},\n  \"remark\": \"Postman出库\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Outbound success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Outbound Records",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/warehouse/outbound/records?page=1\u0026page_size=10\u0026order_no={{warehouse_order_no}}",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "warehouse",
+                                                                               "outbound",
+                                                                               "records"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Outbound records success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Create Main Order",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/orders",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "orders"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"sender_name\": \"主链路发件人\",\n  \"sender_phone\": \"13800000021\",\n  \"sender_country\": \"中国\",\n  \"sender_province\": \"上海\",\n  \"sender_city\": \"上海\",\n  \"sender_address\": \"主链路地址1号\",\n  \"sender_postcode\": \"200000\",\n  \"receiver_name\": \"主链路收件人\",\n  \"receiver_phone\": \"13900000021\",\n  \"receiver_country\": \"中国\",\n  \"receiver_province\": \"江苏\",\n  \"receiver_city\": \"苏州\",\n  \"receiver_address\": \"主链路地址8号\",\n  \"receiver_postcode\": \"215000\",\n  \"goods_name\": \"全链路测试货物\",\n  \"goods_category\": \"包裹\",\n  \"goods_weight\": 8.8,\n  \"goods_volume\": 1.0,\n  \"goods_quantity\": 1,\n  \"goods_value\": 600,\n  \"transport_mode\": 3,\n  \"service_type\": \"standard\",\n  \"remark\": \"全链路回归测试订单\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "var jsonData = pm.response.json();",
+                                                                                "pm.collectionVariables.set(\"order_id\", jsonData.data.order_id);",
+                                                                                "pm.collectionVariables.set(\"order_no\", jsonData.data.order_no);",
+                                                                                "pm.test(\"Main order created\", function () { pm.expect(jsonData.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Accept Main Order",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/orders/{{order_id}}/status",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "orders",
+                                                                               "{{order_id}}",
+                                                                               "status"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"status\": 2,\n  \"remark\": \"Postman推进到已接单\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Main order accepted\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Main Order Inbound",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/warehouse/inbound",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "warehouse",
+                                                                               "inbound"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"order_no\": \"{{order_no}}\",\n  \"station_id\": {{origin_station_id}},\n  \"remark\": \"主链路订单入库\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Main inbound success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Update Main Order To Sorting",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/orders/{{order_id}}/status",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "orders",
+                                                                               "{{order_id}}",
+                                                                               "status"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"status\": 4,\n  \"remark\": \"Postman推进到分拣中\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Main order to sorting\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Order Detail",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/orders/{{order_id}}",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "orders",
+                                                                               "{{order_id}}"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Order detail success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Order List",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/orders?page=1\u0026page_size=20",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "orders"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Order list success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Sorting",
+                     "item":  [
+                                  {
+                                      "name":  "Create Sorting Rule",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/sorting/rules",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "sorting",
+                                                                               "rules"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"rule_name\": \"Postman江苏苏州规则\",\n  \"country\": \"中国\",\n  \"province\": \"江苏\",\n  \"city\": \"苏州\",\n  \"district\": \"\",\n  \"route_code\": \"CN-JS-SZ-POSTMAN\",\n  \"station_id\": {{dest_station_id}},\n  \"priority\": 100,\n  \"description\": \"Postman分拣规则\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "var jsonData = pm.response.json();",
+                                                                                "pm.collectionVariables.set(\"sorting_rule_id\", jsonData.data.id);",
+                                                                                "pm.test(\"Sorting rule created\", function () { pm.expect(jsonData.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Route Match",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/sorting/route/match",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "sorting",
+                                                                               "route",
+                                                                               "match"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"country\": \"中国\",\n  \"province\": \"江苏\",\n  \"city\": \"苏州\",\n  \"district\": \"\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Route match success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Create Sorting Task",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/sorting/tasks",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "sorting",
+                                                                               "tasks"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"station_id\": {{origin_station_id}},\n  \"assigned_to\": 0,\n  \"total_count\": 1,\n  \"remark\": \"Postman分拣任务\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "var jsonData = pm.response.json();",
+                                                                                "pm.collectionVariables.set(\"sorting_task_id\", jsonData.data.id);",
+                                                                                "pm.test(\"Sorting task created\", function () { pm.expect(jsonData.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Sorting Scan",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/sorting/scan",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "sorting",
+                                                                               "scan"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"order_id\": {{order_id}},\n  \"station_id\": {{origin_station_id}},\n  \"task_id\": {{sorting_task_id}},\n  \"remark\": \"Postman分拣扫描\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Sorting scan success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Sorting Records",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/sorting/records?page=1\u0026page_size=10\u0026order_id={{order_id}}",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "sorting",
+                                                                               "records"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Sorting records success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Sorting Stats",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/sorting/stats",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "sorting",
+                                                                               "stats"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Sorting stats success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Transport",
+                     "item":  [
+                                  {
+                                      "name":  "Create Vehicle",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/transport/vehicles",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "transport",
+                                                                               "vehicles"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"plate_number\": \"POSTMAN-001\",\n  \"vehicle_type\": \"厢式货车\",\n  \"capacity\": 12,\n  \"driver_id\": 0\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "var jsonData = pm.response.json();",
+                                                                                "pm.collectionVariables.set(\"vehicle_id\", jsonData.data.id);",
+                                                                                "pm.test(\"Vehicle created\", function () { pm.expect(jsonData.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Create Transport Task",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/transport/tasks",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "transport",
+                                                                               "tasks"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"order_id\": {{order_id}},\n  \"vehicle_id\": {{vehicle_id}},\n  \"driver_id\": 0,\n  \"start_point\": \"上海测试站\",\n  \"end_point\": \"苏州测试站\",\n  \"distance\": 1.0,\n  \"cost\": 120.0,\n  \"remark\": \"Postman运输任务\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "var jsonData = pm.response.json();",
+                                                                                "pm.collectionVariables.set(\"transport_task_id\", jsonData.data.id);",
+                                                                                "pm.test(\"Transport task created\", function () { pm.expect(jsonData.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Load Scan",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/transport/tasks/{{transport_task_id}}/load-scan",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "transport",
+                                                                               "tasks",
+                                                                               "{{transport_task_id}}",
+                                                                               "load-scan"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"scan_code\": \"{{order_no}}\",\n  \"station_id\": {{origin_station_id}},\n  \"remark\": \"Postman装车\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Load scan success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Transport Records",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/transport/records?page=1\u0026page_size=10\u0026order_no={{order_no}}",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "transport",
+                                                                               "records"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Transport records success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Monitor Overview",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/transport/monitor/overview",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "transport",
+                                                                               "monitor",
+                                                                               "overview"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Monitor overview success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Monitor Tasks",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/transport/monitor/tasks?page=1\u0026page_size=20",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "transport",
+                                                                               "monitor",
+                                                                               "tasks"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Monitor task list success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Monitor Warnings",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/transport/monitor/warnings?page=1\u0026page_size=20",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "transport",
+                                                                               "monitor",
+                                                                               "warnings"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Monitor warnings success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Cost Overview",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/transport/costs/overview",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "transport",
+                                                                               "costs",
+                                                                               "overview"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Cost overview success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Cost Tasks",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/transport/costs/tasks?page=1\u0026page_size=20",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "transport",
+                                                                               "costs",
+                                                                               "tasks"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Cost task list success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Cost Task Detail",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/transport/costs/tasks/{{transport_task_id}}",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "transport",
+                                                                               "costs",
+                                                                               "tasks",
+                                                                               "{{transport_task_id}}"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Cost task detail success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Unload Scan",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/transport/tasks/{{transport_task_id}}/unload-scan",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "transport",
+                                                                               "tasks",
+                                                                               "{{transport_task_id}}",
+                                                                               "unload-scan"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"scan_code\": \"{{order_no}}\",\n  \"station_id\": {{dest_station_id}},\n  \"remark\": \"Postman卸车\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Unload scan success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Transport Stats",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/transport/stats",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "transport",
+                                                                               "stats"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Transport stats success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Tracking",
+                     "item":  [
+                                  {
+                                      "name":  "Create Tracking Record",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/tracking/records",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "tracking",
+                                                                               "records"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"order_id\": {{order_id}},\n  \"location\": \"苏州转运中心\",\n  \"latitude\": 31.2989,\n  \"longitude\": 120.5853,\n  \"status\": \"运输节点更新\",\n  \"description\": \"Postman追踪记录\",\n  \"track_time\": 1773814925\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "var jsonData = pm.response.json();",
+                                                                                "pm.collectionVariables.set(\"tracking_record_id\", jsonData.data.id);",
+                                                                                "pm.test(\"Tracking record created\", function () { pm.expect(jsonData.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Tracking Records",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/tracking/records?page=1\u0026page_size=10\u0026order_no={{order_no}}",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "tracking",
+                                                                               "records"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Tracking list success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Tracking Record Detail",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/tracking/records/{{tracking_record_id}}",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "tracking",
+                                                                               "records",
+                                                                               "{{tracking_record_id}}"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Tracking detail success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Tracking History",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/tracking/orders/{{order_id}}/history",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "tracking",
+                                                                               "orders",
+                                                                               "{{order_id}}",
+                                                                               "history"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Tracking history success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Tracking Timeline",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/tracking/orders/{{order_id}}/timeline",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "tracking",
+                                                                               "orders",
+                                                                               "{{order_id}}",
+                                                                               "timeline"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Tracking timeline success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Tracking Warnings",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/tracking/warnings?page=1\u0026page_size=10",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "tracking",
+                                                                               "warnings"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Tracking warnings success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Exceptions",
+                     "item":  [
+                                  {
+                                      "name":  "Create Exception",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/exceptions",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "exceptions"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"order_id\": {{order_id}},\n  \"type\": 3,\n  \"station_id\": {{dest_station_id}},\n  \"description\": \"Postman异常联调测试\",\n  \"images\": [\"https://example.com/exception.jpg\"],\n  \"remark\": \"Postman异常\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "var jsonData = pm.response.json();",
+                                                                                "pm.collectionVariables.set(\"exception_id\", jsonData.data.id);",
+                                                                                "pm.test(\"Exception created\", function () { pm.expect(jsonData.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Exception List",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/exceptions?page=1\u0026page_size=10\u0026order_no={{order_no}}",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "exceptions"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Exception list success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Exception Detail",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/exceptions/{{exception_id}}",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "exceptions",
+                                                                               "{{exception_id}}"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Exception detail success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Assign Exception",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/exceptions/{{exception_id}}/assign",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "exceptions",
+                                                                               "{{exception_id}}",
+                                                                               "assign"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"handler_id\": {{manager_id}},\n  \"remark\": \"Postman分配处理人\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Exception assign success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Process Exception",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/exceptions/{{exception_id}}/process",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "exceptions",
+                                                                               "{{exception_id}}",
+                                                                               "process"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"status\": 3,\n  \"solution\": \"重新安排运输\",\n  \"result\": \"异常已解决\",\n  \"compensate_amount\": 25,\n  \"remark\": \"Postman处理完成\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Exception process success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Close Exception",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/exceptions/{{exception_id}}/close",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "exceptions",
+                                                                               "{{exception_id}}",
+                                                                               "close"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"resume_status\": 7,\n  \"remark\": \"Postman关闭异常\",\n  \"result\": \"恢复至目的地分拣\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Exception close success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Exception Stats",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/exceptions/stats",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "exceptions",
+                                                                               "stats"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Exception stats success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Dispatch",
+                     "item":  [
+                                  {
+                                      "name":  "Optimize Route",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/dispatch/route/optimize",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "dispatch",
+                                                                               "route",
+                                                                               "optimize"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"station_ids\": [{{origin_station_id}}, {{dest_station_id}}],\n  \"vehicle_id\": {{vehicle_id}}\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Dispatch route optimize success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Create Batch Schedule",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/dispatch/batches",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "dispatch",
+                                                                               "batches"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"batch_name\": \"Postman批次调度\",\n  \"vehicle_id\": {{vehicle_id}},\n  \"driver_id\": {{driver_id}},\n  \"order_ids\": [{{order_id}}],\n  \"planned_time\": 1775000000,\n  \"remark\": \"Postman批次\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "var jsonData = pm.response.json();",
+                                                                                "pm.collectionVariables.set(\"batch_schedule_id\", jsonData.data.id);",
+                                                                                "pm.test(\"Batch schedule created\", function () { pm.expect(jsonData.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Batch List",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/dispatch/batches?page=1\u0026page_size=10",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "dispatch",
+                                                                               "batches"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Batch list success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Update Batch Status",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/dispatch/batches/{{batch_schedule_id}}/status",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "dispatch",
+                                                                               "batches",
+                                                                               "{{batch_schedule_id}}",
+                                                                               "status"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"status\": \"dispatched\",\n  \"remark\": \"Postman已发车\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Batch status update success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Dispatch Suggestion",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/dispatch/suggestion",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "dispatch",
+                                                                               "suggestion"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"order_ids\": [{{order_id}}, {{warehouse_order_id}}],\n  \"date\": 1775000000\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Dispatch suggestion success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Create Transport Plan",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/dispatch/plans",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "dispatch",
+                                                                               "plans"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"plan_name\": \"Postman运输计划\",\n  \"plan_date\": 1775000000,\n  \"vehicle_id\": {{vehicle_id}},\n  \"driver_id\": {{driver_id}},\n  \"start_point\": \"上海始发中心\",\n  \"end_point\": \"苏州目的中心\",\n  \"waypoints\": \"[]\",\n  \"distance\": 180,\n  \"estimated_hours\": 4,\n  \"max_capacity\": 12,\n  \"remark\": \"Postman运输计划\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "var jsonData = pm.response.json();",
+                                                                                "pm.collectionVariables.set(\"transport_plan_id\", jsonData.data.id);",
+                                                                                "pm.test(\"Transport plan created\", function () { pm.expect(jsonData.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Transport Plan List",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/dispatch/plans?page=1\u0026page_size=10",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "dispatch",
+                                                                               "plans"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Transport plan list success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Get Transport Plan Detail",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/dispatch/plans/{{transport_plan_id}}",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "dispatch",
+                                                                               "plans",
+                                                                               "{{transport_plan_id}}"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Transport plan detail success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Assign Orders To Plan",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/dispatch/plans/{{transport_plan_id}}/orders",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "dispatch",
+                                                                               "plans",
+                                                                               "{{transport_plan_id}}",
+                                                                               "orders"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"order_ids\": [{{order_id}}]\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Assign order to plan success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  },
+                                  {
+                                      "name":  "Update Transport Plan Status",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/dispatch/plans/{{transport_plan_id}}/status",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "dispatch",
+                                                                               "plans",
+                                                                               "{{transport_plan_id}}",
+                                                                               "status"
+                                                                           ]
+                                                              },
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"status\": \"confirmed\",\n  \"remark\": \"Postman确认计划\"\n}"
+                                                               }
+                                                  },
+                                      "event":  {
+                                                    "listen":  "test",
+                                                    "script":  {
+                                                                   "type":  "text/javascript",
+                                                                   "exec":  [
+                                                                                "pm.test(\"Plan status update success\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                                                                            ]
+                                                               }
+                                                }
+                                  }
+                              ]
+                 }
+             ]
+}
+
