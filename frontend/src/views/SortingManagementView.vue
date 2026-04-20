@@ -224,18 +224,18 @@
                   </div>
                 </div>
                 <el-form :model="scanForm" label-position="top">
-                  <el-form-item label="订单号">
-                    <el-input v-model="scanForm.order_no" placeholder="请输入订单号" />
+                  <el-form-item label="扫描码">
+                    <el-input v-model="scanForm.scan_code" placeholder="请输入订单号或包裹号" />
                   </el-form-item>
                   <el-form-item label="当前站点">
                     <el-select v-model="scanForm.station_id" placeholder="请选择站点" style="width: 100%">
                       <el-option v-for="item in stationOptions" :key="item.id" :label="normalizeText(item.name, item.station_code)" :value="item.id" />
                     </el-select>
                   </el-form-item>
-                  <el-form-item label="关联任务">
-                    <el-select v-model="scanForm.task_id" clearable placeholder="可选" style="width: 100%">
-                      <el-option label="不关联任务" :value="undefined" />
-                      <el-option v-for="item in taskOptionsForScan" :key="item.id" :label="item.task_no" :value="item.id" />
+                  <el-form-item label="关联任务号">
+                    <el-select v-model="scanForm.task_code" clearable placeholder="可选" style="width: 100%">
+                      <el-option label="不关联任务" :value="''" />
+                      <el-option v-for="item in taskOptionsForScan" :key="item.id" :label="item.task_no" :value="item.task_no" />
                     </el-select>
                   </el-form-item>
                   <el-form-item label="备注">
@@ -247,7 +247,10 @@
                 <div v-if="scanResult" class="scan-result">
                   <el-tag :type="scanResult.route_matched ? 'success' : 'warning'" effect="dark">{{ scanResult.route_matched ? '已匹配路由' : '未匹配路由' }}</el-tag>
                   <p>{{ scanResult.message }}</p>
-                  <small v-if="scanResult.route_code">路由：{{ scanResult.route_code }} / {{ normalizeText(scanResult.station_name) }}</small>
+                  <small v-if="scanResult.parcel_no || scanResult.task_no">
+                    {{ scanResult.parcel_no || '整单' }} / {{ scanResult.task_no || '未关联任务' }}
+                  </small>
+                  <small v-else-if="scanResult.route_code">路由：{{ scanResult.route_code }} / {{ normalizeText(scanResult.station_name) }}</small>
                 </div>
               </div>
 
@@ -421,7 +424,7 @@ type SortingTaskItem = { id: number; task_no: string; station_id: number; statio
 type SortingTaskListResponse = { list: SortingTaskItem[]; total: number; page: number; page_size: number; pages: number }
 type SortingRecordItem = { id: number; task_id: number; task_no: string; order_id: number; order_no: string; station_id: number; station_name: string; rule_id: number; rule_name: string; route_code: string; target_station: number; target_name: string; sorter_id: number; sorter_name: string; scan_time: number; scan_time_format: string; is_correct: number; is_correct_name: string; remark: string }
 type SortingRecordListResponse = { list: SortingRecordItem[]; total: number; page: number; page_size: number; pages: number }
-type SortingScanResponse = { record_id: number; order_id: number; order_no: string; route_matched: boolean; route_code?: string; station_name?: string; match_level?: string; suggestions?: SortingRuleItem[]; message: string }
+type SortingScanResponse = { record_id: number; order_id: number; order_no: string; parcel_no?: string; task_id?: number; task_no?: string; scan_code_type?: string; route_matched: boolean; route_code?: string; station_name?: string; match_level?: string; suggestions?: SortingRuleItem[]; message: string }
 type SortingStatsResponse = { task_stats: { total_tasks: number; pending_tasks: number; processing_tasks: number; completed_tasks: number; cancelled_tasks: number; avg_progress: number; total_items: number; sorted_items: number }; record_stats: { total_records: number; correct_records: number; error_records: number; accuracy_rate: string; avg_scan_time: number }; sorter_stats: Array<{ sorter_id: number; sorter_name: string; task_count: number; record_count: number; correct_count: number; error_count: number; accuracy_rate: string; avg_speed: number }>; station_stats: Array<{ station_id: number; station_name: string; task_count: number; record_count: number; item_count: number }>; accuracy_stats: { overall_rate: string } }
 
 const taskStatusOptions = [
@@ -457,7 +460,7 @@ const recordPagination = reactive({ total: 0, page: 1, pageSize: 10 })
 const ruleFilters = reactive({ rule_name: '', country: '', city: '', station_id: undefined as number | undefined, status: -1 })
 const taskFilters = reactive({ task_no: '', station_id: undefined as number | undefined, assigned_to: undefined as number | undefined, status: undefined as string | undefined })
 const recordFilters = reactive({ task_id: undefined as number | undefined, order_id: undefined as number | undefined, station_id: undefined as number | undefined, sorter_id: undefined as number | undefined, is_correct: -1 })
-const scanForm = reactive({ order_no: '', station_id: undefined as number | undefined, task_id: undefined as number | undefined, remark: '' })
+const scanForm = reactive({ scan_code: '', station_id: undefined as number | undefined, task_code: '', remark: '' })
 
 const ruleDialogVisible = ref(false)
 const ruleDialogMode = ref<'create' | 'edit'>('create')
@@ -529,8 +532,8 @@ async function submitTaskDialog() { if (!taskFormRef.value) return; const valid 
 function openTaskStatusDialog(task: SortingTaskItem) { currentTaskForStatus.value = task; taskStatusForm.status = nextTaskStatuses(task.status)[0]?.value; taskStatusForm.remark = ''; taskStatusDialogVisible.value = true }
 async function submitTaskStatus() { if (!currentTaskForStatus.value || !taskStatusForm.status) return; taskStatusSubmitting.value = true; try { await http.put(`/sorting/tasks/${currentTaskForStatus.value.id}/status`, { status: taskStatusForm.status, remark: taskStatusForm.remark.trim() }); ElMessage.success('任务状态已更新'); taskStatusDialogVisible.value = false; await Promise.all([loadTasks(), loadSortingStats()]) } finally { taskStatusSubmitting.value = false } }
 
-function prefillScan(task: SortingTaskItem) { activeTab.value = 'tasks'; scanForm.task_id = task.id; scanForm.station_id = task.station_id; scanForm.order_no = ''; scanForm.remark = '' }
-async function submitScan() { if (!scanForm.order_no.trim() || !scanForm.station_id) { ElMessage.warning('请填写订单号和站点'); return } scanSubmitting.value = true; try { scanResult.value = await http.post<never, SortingScanResponse>('/sorting/scan', { order_no: scanForm.order_no.trim(), station_id: Number(scanForm.station_id), task_id: scanForm.task_id ? Number(scanForm.task_id) : 0, remark: scanForm.remark.trim() }); ElMessage.success(scanResult.value.message); await Promise.all([loadTasks(), loadRecords(), loadSortingStats()]) } finally { scanSubmitting.value = false } }
+function prefillScan(task: SortingTaskItem) { activeTab.value = 'tasks'; scanForm.task_code = task.task_no; scanForm.station_id = task.station_id; scanForm.scan_code = ''; scanForm.remark = '' }
+async function submitScan() { if (!scanForm.scan_code.trim() || !scanForm.station_id) { ElMessage.warning('请填写扫描码和站点'); return } scanSubmitting.value = true; try { scanResult.value = await http.post<never, SortingScanResponse>('/sorting/scan', { scan_code: scanForm.scan_code.trim(), station_id: Number(scanForm.station_id), task_code: scanForm.task_code.trim(), remark: scanForm.remark.trim() }); ElMessage.success(scanResult.value.message); await Promise.all([loadTasks(), loadRecords(), loadSortingStats()]) } finally { scanSubmitting.value = false } }
 
 async function applyRuleFilters() { rulePagination.page = 1; await loadRules() }
 function resetRuleFilters() { ruleFilters.rule_name = ''; ruleFilters.country = ''; ruleFilters.city = ''; ruleFilters.station_id = undefined; ruleFilters.status = -1; rulePagination.page = 1; void loadRules() }

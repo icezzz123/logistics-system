@@ -13,6 +13,8 @@ import StationInventoryView from '@/views/StationInventoryView.vue'
 import TrackingManagementView from '@/views/TrackingManagementView.vue'
 import TransportManagementView from '@/views/TransportManagementView.vue'
 import UserManagementView from '@/views/UserManagementView.vue'
+import CustomerPortalView from '@/views/CustomerPortalView.vue'
+import CourierWorkbenchView from '@/views/CourierWorkbenchView.vue'
 import { useAuthStore } from '@/stores/auth'
 import { hasAccess, type AccessRule } from '@/utils/access'
 
@@ -40,7 +42,19 @@ const router = createRouter({
           path: '',
           name: 'dashboard',
           component: DashboardView,
-          meta: { title: '总览', description: '查看当前系统模块与后端联调状态。' },
+          meta: { title: '总览', description: '查看当前系统模块与后端联调状态。', access: { allowedRoles: [2, 3, 4, 5, 6, 7] } },
+        },
+        {
+          path: 'customer',
+          name: 'customer-portal',
+          component: CustomerPortalView,
+          meta: { title: '客户门户', description: '查询我的订单、查看追踪并提交异常反馈。', access: { allowedRoles: [1, 7] } },
+        },
+        {
+          path: 'courier',
+          name: 'courier-workbench',
+          component: CourierWorkbenchView,
+          meta: { title: '快递员工作台', description: '处理揽收任务与派送任务，完成认领、作业、送达和签收闭环。', access: { allowedRoles: [2, 5, 6, 7], requiredPermissions: ['pickup:view', 'delivery:view'] } },
         },
         {
           path: 'users',
@@ -52,37 +66,37 @@ const router = createRouter({
           path: 'orders',
           name: 'orders',
           component: OrderManagementView,
-          meta: { title: '订单管理', description: '查看订单列表、订单详情、状态流转与状态日志。', access: { requiredPermissions: ['order:view'] } },
+          meta: { title: '订单管理', description: '查看订单列表、订单详情、状态流转与状态日志。', access: { allowedRoles: [3, 4, 5, 6, 7], requiredPermissions: ['order:view'] } },
         },
         {
           path: 'stations',
           name: 'stations',
           component: StationInventoryView,
-          meta: { title: '站点库存', description: '查看站点台账、库存预警、盘点记录与站点流转。', access: { requiredPermissions: ['station:view'] } },
+          meta: { title: '站点库存', description: '查看站点台账、库存预警、盘点记录与站点流转。', access: { allowedRoles: [5, 6, 7], requiredPermissions: ['station:view'] } },
         },
         {
           path: 'sorting',
           name: 'sorting',
           component: SortingManagementView,
-          meta: { title: '分拣管理', description: '查看分拣规则、分拣任务、分拣扫描与分拣记录。', access: { requiredPermissions: ['sorting:view'] } },
+          meta: { title: '分拣管理', description: '查看分拣规则、分拣任务、分拣扫描与分拣记录。', access: { allowedRoles: [3, 5, 6, 7], requiredPermissions: ['sorting:view'] } },
         },
         {
           path: 'transport',
           name: 'transport',
           component: TransportManagementView,
-          meta: { title: '运输管理', description: '查看车辆、运输任务、装卸记录、监控预警与运输成本。', access: { requiredPermissions: ['transport:view'] } },
+          meta: { title: '运输管理', description: '查看车辆、运输任务、装卸记录、监控预警与运输成本。', access: { allowedRoles: [4, 6, 7], requiredPermissions: ['transport:view'] } },
         },
         {
           path: 'tracking',
           name: 'tracking',
           component: TrackingManagementView,
-          meta: { title: '物流追踪', description: '查看追踪记录、订单历史、时间轴与时效预警。', access: { requiredPermissions: ['tracking:view'] } },
+          meta: { title: '物流追踪', description: '查看追踪记录、订单历史、时间轴与时效预警。', access: { allowedRoles: [2, 3, 4, 5, 6, 7], requiredPermissions: ['tracking:view'] } },
         },
         {
           path: 'exceptions',
           name: 'exceptions',
           component: ExceptionManagementView,
-          meta: { title: '异常管理', description: '查看异常列表、异常统计、创建异常和处理流转。', access: { requiredPermissions: ['exception:view'] } },
+          meta: { title: '异常管理', description: '查看异常列表、异常统计、创建异常和处理流转。', access: { allowedRoles: [2, 5, 6, 7], requiredPermissions: ['exception:view'] } },
         },
         {
           path: 'dispatch',
@@ -120,7 +134,21 @@ router.beforeEach(async (to) => {
     return { path: '/' }
   }
 
+  if (to.meta.requiresAuth && to.path === '/' && authStore.user?.role === 1) {
+    return { path: '/customer' }
+  }
+
+  if (to.meta.requiresAuth && to.path === '/' && authStore.user?.role === 2) {
+    return { path: '/courier' }
+  }
+
   if (to.meta.requiresAuth && !hasAccess(to.meta.access as AccessRule | undefined, authStore.user?.role, authStore.permissions)) {
+    if (authStore.user?.role === 1) {
+      return { path: '/customer' }
+    }
+    if (authStore.user?.role === 2) {
+      return { path: '/courier' }
+    }
     return { path: '/' }
   }
 

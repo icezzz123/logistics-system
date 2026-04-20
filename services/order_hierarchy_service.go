@@ -31,6 +31,10 @@ func roundPositive(value float64) float64 {
 	return roundCurrency(value)
 }
 
+func calculateCustomsFee(duty, vat, other float64) float64 {
+	return roundPositive(duty) + roundPositive(vat) + roundPositive(other)
+}
+
 func mergeRemark(parts ...string) string {
 	items := make([]string, 0, len(parts))
 	for _, part := range parts {
@@ -156,6 +160,12 @@ func (s *OrderService) normalizeCreateOrderRequest(req *dto.CreateOrderRequest) 
 	normalized.GoodsCategory = strings.TrimSpace(req.GoodsCategory)
 	normalized.ServiceType = strings.TrimSpace(req.ServiceType)
 	normalized.Remark = strings.TrimSpace(req.Remark)
+	normalized.CustomsDeclaration = strings.TrimSpace(req.CustomsDeclaration)
+	normalized.HSCode = strings.TrimSpace(req.HSCode)
+	normalized.DeclaredValue = roundPositive(req.DeclaredValue)
+	normalized.CustomsDuty = roundPositive(req.CustomsDuty)
+	normalized.CustomsVAT = roundPositive(req.CustomsVAT)
+	normalized.CustomsOtherTax = roundPositive(req.CustomsOtherTax)
 
 	packages := make([]dto.OrderPackageRequest, 0, len(req.Packages))
 	totalWeight := 0.0
@@ -191,6 +201,10 @@ func (s *OrderService) normalizeCreateOrderRequest(req *dto.CreateOrderRequest) 
 	if normalized.GoodsQuantity <= 0 {
 		normalized.GoodsQuantity = 1
 	}
+	if normalized.DeclaredValue <= 0 && normalized.GoodsValue > 0 {
+		normalized.DeclaredValue = roundPositive(normalized.GoodsValue)
+	}
+	applyHSCodeDefaults(&normalized)
 	return normalized
 }
 
@@ -518,6 +532,10 @@ func (s *OrderService) GetOrderDetailResponse(orderID uint) (*dto.OrderDetailRes
 	if err != nil {
 		return nil, err
 	}
+	customsNodes, err := s.loadOrderCustomsNodes(tx, order.ID)
+	if err != nil {
+		return nil, err
+	}
 
 	packageInfos := make([]dto.OrderPackageInfo, 0, len(packages))
 	for _, pkg := range packages {
@@ -598,6 +616,8 @@ func (s *OrderService) GetOrderDetailResponse(orderID uint) (*dto.OrderDetailRes
 		Remark:           order.Remark,
 		CTime:            order.CTime,
 		MTime:            order.MTime,
+		Customs:          s.buildOrderCustomsInfo(*order),
+		CustomsNodes:     customsNodes,
 		Packages:         packageInfos,
 		ChildOrders:      childSummaries,
 	}, nil
@@ -614,8 +634,8 @@ func (s *OrderService) canEditOrderStructure(order *models.Order) error {
 	if childCount > 0 {
 		return errors.New("当前订单已存在子单，不能重复调整结构")
 	}
-	if order.Status != models.OrderPending && order.Status != models.OrderAccepted {
-		return errors.New("仅待处理或已接单状态的订单支持结构调整")
+	if order.Status != models.OrderPending && order.Status != models.OrderAccepted && order.Status != models.OrderPickupPending {
+		return errors.New("仅待处理、已接单或待揽收状态的订单支持结构调整")
 	}
 	return nil
 }

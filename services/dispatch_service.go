@@ -255,6 +255,7 @@ func (s *DispatchService) CreateBatchSchedule(req *dto.CreateBatchScheduleReques
 
 		task := &models.TransportTask{
 			TaskNo:     fmt.Sprintf("T%s%d", time.Now().Format("20060102150405.000000"), order.ID),
+			BatchID:    batch.ID,
 			OrderID:    order.ID,
 			VehicleID:  req.VehicleID,
 			DriverID:   req.DriverID,
@@ -416,6 +417,97 @@ func (s *DispatchService) GetBatchScheduleList(req *dto.BatchScheduleQueryReques
 	}, nil
 }
 
+func (s *DispatchService) GetBatchScheduleByID(id uint) (*dto.BatchScheduleResponse, error) {
+	db := database.DB
+
+	var batch models.BatchSchedule
+	if err := db.First(&batch, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.New("鎵规璋冨害涓嶅瓨鍦?")
+		}
+		return nil, errors.New("鏌ヨ鎵规璋冨害澶辫触")
+	}
+
+	var vehicle models.Vehicle
+	if err := db.First(&vehicle, batch.VehicleID).Error; err != nil && err != gorm.ErrRecordNotFound {
+		return nil, errors.New("鏌ヨ杞﹁締澶辫触")
+	}
+
+	var driver models.User
+	if err := db.First(&driver, batch.DriverID).Error; err != nil && err != gorm.ErrRecordNotFound {
+		return nil, errors.New("鏌ヨ鍙告満澶辫触")
+	}
+
+	var tasks []models.TransportTask
+	if err := db.Where("batch_id = ?", batch.ID).Order("id ASC").Find(&tasks).Error; err != nil {
+		return nil, errors.New("鏌ヨ鎵规浠诲姟澶辫触")
+	}
+
+	orderMap := make(map[uint]string, len(tasks))
+	if len(tasks) > 0 {
+		orderIDs := make([]uint, 0, len(tasks))
+		for _, task := range tasks {
+			orderIDs = append(orderIDs, task.OrderID)
+		}
+		var orders []models.Order
+		if err := db.Select("id, order_no").Where("id IN ?", orderIDs).Find(&orders).Error; err == nil {
+			for _, order := range orders {
+				orderMap[order.ID] = order.OrderNo
+			}
+		}
+	}
+
+	driverName := driver.RealName
+	if driverName == "" {
+		driverName = driver.Username
+	}
+
+	taskList := make([]dto.TransportTaskResponse, 0, len(tasks))
+	for _, task := range tasks {
+		taskList = append(taskList, dto.TransportTaskResponse{
+			ID:          task.ID,
+			TaskNo:      task.TaskNo,
+			OrderID:     task.OrderID,
+			OrderNo:     orderMap[task.OrderID],
+			VehicleID:   task.VehicleID,
+			PlateNumber: vehicle.PlateNumber,
+			DriverID:    task.DriverID,
+			DriverName:  driverName,
+			StartPoint:  task.StartPoint,
+			EndPoint:    task.EndPoint,
+			Distance:    task.Distance,
+			Status:      task.Status,
+			StatusName:  s.getTransportTaskStatusName(task.Status),
+			StartTime:   task.StartTime,
+			EndTime:     task.EndTime,
+			Cost:        task.Cost,
+			Remark:      task.Remark,
+			CreateTime:  utils.FormatTimestamp(task.CTime),
+			UpdateTime:  utils.FormatTimestamp(task.MTime),
+		})
+	}
+
+	return &dto.BatchScheduleResponse{
+		ID:          batch.ID,
+		BatchNo:     batch.BatchNo,
+		BatchName:   batch.BatchName,
+		VehicleID:   batch.VehicleID,
+		PlateNumber: vehicle.PlateNumber,
+		DriverID:    batch.DriverID,
+		DriverName:  driverName,
+		OrderCount:  batch.OrderCount,
+		TotalWeight: batch.TotalWeight,
+		Status:      batch.Status,
+		StatusName:  s.getBatchStatusName(batch.Status),
+		PlannedTime: batch.PlannedTime,
+		ActualTime:  batch.ActualTime,
+		Tasks:       taskList,
+		Remark:      batch.Remark,
+		CreateTime:  utils.FormatTimestamp(batch.CTime),
+		UpdateTime:  utils.FormatTimestamp(batch.MTime),
+	}, nil
+}
+
 // UpdateBatchScheduleStatus 更新批次调度状态
 func (s *DispatchService) UpdateBatchScheduleStatus(id uint, req *dto.BatchScheduleStatusRequest) error {
 	db := database.DB
@@ -572,6 +664,21 @@ func (s *DispatchService) getBatchStatusName(status string) string {
 		return "已取消"
 	default:
 		return "未知"
+	}
+}
+
+func (s *DispatchService) getTransportTaskStatusName(status string) string {
+	switch status {
+	case "pending":
+		return "寰呮墽琛?"
+	case "in_progress":
+		return "鎵ц涓?"
+	case "completed":
+		return "宸插畬鎴?"
+	case "cancelled":
+		return "宸插彇娑?"
+	default:
+		return "鏈煡"
 	}
 }
 

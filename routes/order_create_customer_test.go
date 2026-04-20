@@ -15,10 +15,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func TestAdminCanCreateOrderForCustomer(t *testing.T) {
-	db := testutil.EnsureTestDB(t)
+func TestAdminCannotCreateOrderForCustomer(t *testing.T) {
 	admin := testutil.CreateTestUser(t, models.RoleAdmin)
 	customer := testutil.CreateTestUser(t, models.RoleCustomer)
+	testutil.CreateTestStation(t, models.StationOrigin)
 
 	token, err := utils.GenerateToken(admin.ID, admin.Username, int(admin.Role), 3600)
 	if err != nil {
@@ -27,7 +27,7 @@ func TestAdminCanCreateOrderForCustomer(t *testing.T) {
 
 	payload := map[string]interface{}{
 		"customer_id":       customer.ID,
-		"sender_name":       "测试发件人",
+		"sender_name":       "管理员发件人",
 		"sender_phone":      "13812345678",
 		"sender_country":    "中国",
 		"sender_province":   "上海",
@@ -51,7 +51,7 @@ func TestAdminCanCreateOrderForCustomer(t *testing.T) {
 		"insured_amount":    0,
 		"transport_mode":    1,
 		"service_type":      "standard",
-		"remark":            "代客户录单测试",
+		"remark":            "非客户越权录单测试",
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -71,29 +71,7 @@ func TestAdminCanCreateOrderForCustomer(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200 for delegated create order, got %d, body=%s", w.Code, w.Body.String())
-	}
-
-	var resp struct {
-		Code int `json:"code"`
-		Data struct {
-			OrderID uint `json:"order_id"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-		t.Fatalf("unmarshal response failed: %v", err)
-	}
-	if resp.Code != 200 || resp.Data.OrderID == 0 {
-		t.Fatalf("unexpected response body: %s", w.Body.String())
-	}
-	defer testutil.CleanupOrderData(t, resp.Data.OrderID)
-
-	var created models.Order
-	if err := db.First(&created, resp.Data.OrderID).Error; err != nil {
-		t.Fatalf("query created order failed: %v", err)
-	}
-	if created.CustomerID != customer.ID {
-		t.Fatalf("expected created order to belong to customer %d, got %d", customer.ID, created.CustomerID)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for delegated create order, got %d, body=%s", w.Code, w.Body.String())
 	}
 }

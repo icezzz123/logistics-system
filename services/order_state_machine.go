@@ -26,8 +26,26 @@ var stateTransitions = []StateTransition{
 	// 已接单 -> 已入库（站点管理员、调度员、管理员）
 	{FromStatus: models.OrderAccepted, ToStatus: models.OrderInWarehouse, AllowedBy: []int{5, 6, 7}},
 
+	// 已接单 -> 待揽收（站点管理员、调度员、管理员）
+	{FromStatus: models.OrderAccepted, ToStatus: models.OrderPickupPending, AllowedBy: []int{5, 6, 7}},
+
+	// 已接单 -> 揽收中（快递员、调度员、管理员，兼容旧任务直接开始）
+	{FromStatus: models.OrderAccepted, ToStatus: models.OrderPickingUp, AllowedBy: []int{2, 6, 7}},
+
 	// 已接单 -> 已取消（客户、调度员、管理员）
 	{FromStatus: models.OrderAccepted, ToStatus: models.OrderCancelled, AllowedBy: []int{1, 6, 7}},
+
+	// 待揽收 -> 揽收中（快递员、调度员、管理员）
+	{FromStatus: models.OrderPickupPending, ToStatus: models.OrderPickingUp, AllowedBy: []int{2, 6, 7}},
+
+	// 待揽收 -> 已取消（客户、调度员、管理员）
+	{FromStatus: models.OrderPickupPending, ToStatus: models.OrderCancelled, AllowedBy: []int{1, 6, 7}},
+
+	// 已揽收中 -> 已揽收（快递员、调度员、管理员）
+	{FromStatus: models.OrderPickingUp, ToStatus: models.OrderPickedUp, AllowedBy: []int{2, 6, 7}},
+
+	// 已揽收 -> 已入库（站点管理员、调度员、管理员）
+	{FromStatus: models.OrderPickedUp, ToStatus: models.OrderInWarehouse, AllowedBy: []int{5, 6, 7}},
 
 	// 已入库 -> 分拣中（分拣员、站点管理员、调度员、管理员）
 	{FromStatus: models.OrderInWarehouse, ToStatus: models.OrderSorting, AllowedBy: []int{3, 5, 6, 7}},
@@ -56,6 +74,9 @@ var stateTransitions = []StateTransition{
 	// 任何状态 -> 异常（除已取消、已签收外）
 	{FromStatus: models.OrderPending, ToStatus: models.OrderException, AllowedBy: []int{2, 3, 4, 5, 6, 7}},
 	{FromStatus: models.OrderAccepted, ToStatus: models.OrderException, AllowedBy: []int{2, 3, 4, 5, 6, 7}},
+	{FromStatus: models.OrderPickupPending, ToStatus: models.OrderException, AllowedBy: []int{2, 3, 4, 5, 6, 7}},
+	{FromStatus: models.OrderPickingUp, ToStatus: models.OrderException, AllowedBy: []int{2, 3, 4, 5, 6, 7}},
+	{FromStatus: models.OrderPickedUp, ToStatus: models.OrderException, AllowedBy: []int{2, 3, 4, 5, 6, 7}},
 	{FromStatus: models.OrderInWarehouse, ToStatus: models.OrderException, AllowedBy: []int{2, 3, 4, 5, 6, 7}},
 	{FromStatus: models.OrderSorting, ToStatus: models.OrderException, AllowedBy: []int{2, 3, 4, 5, 6, 7}},
 	{FromStatus: models.OrderInTransit, ToStatus: models.OrderException, AllowedBy: []int{2, 3, 4, 5, 6, 7}},
@@ -67,6 +88,9 @@ var stateTransitions = []StateTransition{
 	// 异常 -> 恢复到之前的状态（调度员、管理员）
 	{FromStatus: models.OrderException, ToStatus: models.OrderPending, AllowedBy: []int{6, 7}},
 	{FromStatus: models.OrderException, ToStatus: models.OrderAccepted, AllowedBy: []int{6, 7}},
+	{FromStatus: models.OrderException, ToStatus: models.OrderPickupPending, AllowedBy: []int{6, 7}},
+	{FromStatus: models.OrderException, ToStatus: models.OrderPickingUp, AllowedBy: []int{6, 7}},
+	{FromStatus: models.OrderException, ToStatus: models.OrderPickedUp, AllowedBy: []int{6, 7}},
 	{FromStatus: models.OrderException, ToStatus: models.OrderInWarehouse, AllowedBy: []int{6, 7}},
 	{FromStatus: models.OrderException, ToStatus: models.OrderSorting, AllowedBy: []int{6, 7}},
 	{FromStatus: models.OrderException, ToStatus: models.OrderInTransit, AllowedBy: []int{6, 7}},
@@ -187,6 +211,9 @@ func (sm *OrderStateMachine) GetStatusFlow() []models.OrderStatus {
 	return []models.OrderStatus{
 		models.OrderPending,            // 1. 待处理
 		models.OrderAccepted,           // 2. 已接单
+		models.OrderPickupPending,      // 13. 待揽收
+		models.OrderPickingUp,          // 14. 揽收中
+		models.OrderPickedUp,           // 15. 已揽收
 		models.OrderInWarehouse,        // 3. 已入库
 		models.OrderSorting,            // 4. 分拣中
 		models.OrderInTransit,          // 5. 运输中

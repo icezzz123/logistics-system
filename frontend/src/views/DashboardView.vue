@@ -531,7 +531,7 @@ const roleTodoItems = computed(() => {
         {
           group: '客户',
           title: '在途订单',
-          metric: `${countOrderStatuses([3, 4, 5, 7, 8])} 单`,
+          metric: `${countOrderStatuses([13, 14, 15, 3, 4, 5, 7, 8])} 单`,
           detail: '查看物流进度、签收前关键节点',
           to: createWorkbenchRoute('/tracking', { tab: 'records' }),
         },
@@ -555,7 +555,7 @@ const roleTodoItems = computed(() => {
         {
           group: '快递员',
           title: '在途关注',
-          metric: `${countOrderStatuses([5, 7, 8])} 单`,
+          metric: `${countOrderStatuses([14, 15, 5, 7, 8])} 单`,
           detail: `追踪预警 ${trackingWarningTotal.value} 单`,
           to: createWorkbenchRoute('/tracking', { tab: 'warnings', warning_level: pickTrackingWarningLevel() }),
         },
@@ -621,8 +621,8 @@ const roleTodoItems = computed(() => {
           group: '站点管理员',
           title: '待入库订单',
           metric: `${countOrderStatus(2)} 单`,
-          detail: '已接单后等待站点入库承接',
-          to: createWorkbenchRoute('/orders', { status: 2 }),
+          detail: '优先推进待揽收、揽收中和已揽收待入库订单',
+          to: createWorkbenchRoute('/orders', { status: 13 }),
         },
         {
           group: '站点管理员',

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"logistics-system/dto"
 	"logistics-system/models"
 	"logistics-system/testutil"
 	"testing"
@@ -61,5 +62,49 @@ func TestGetExceptionByIDHandlesMissingUsers(t *testing.T) {
 	}
 	if info.HandlerName != "" {
 		t.Fatalf("expected empty handler name when linked user is missing, got %q", info.HandlerName)
+	}
+}
+
+func TestCustomerCanCreateExceptionFeedbackForOwnOrder(t *testing.T) {
+	db := testutil.EnsureTestDB(t)
+	service := NewExceptionService()
+
+	customer := testutil.CreateTestUser(t, models.RoleCustomer)
+	order := testutil.CreateTestOrder(t, customer.ID, models.OrderInTransit)
+
+	req := &dto.CreateExceptionRequest{
+		OrderID:     order.ID,
+		Type:        int(models.ExceptionDelay),
+		Description: "客户在门户提交异常反馈",
+		Remark:      "自动化测试",
+	}
+
+	info, err := service.CreateExceptionForUser(customer.ID, int(models.RoleCustomer), req)
+	if err != nil {
+		t.Fatalf("CreateExceptionForUser failed: %v", err)
+	}
+	if info == nil || info.ID == 0 {
+		t.Fatalf("expected created exception info, got %#v", info)
+	}
+
+	t.Cleanup(func() {
+		_ = db.Where("id = ?", info.ID).Delete(&models.ExceptionRecord{}).Error
+		_ = db.Model(&models.Order{}).Where("id = ?", order.ID).Update("status", int(models.OrderInTransit)).Error
+	})
+
+	var updatedOrder models.Order
+	if err := db.First(&updatedOrder, order.ID).Error; err != nil {
+		t.Fatalf("query order failed: %v", err)
+	}
+	if updatedOrder.Status != models.OrderException {
+		t.Fatalf("expected order status %d, got %d", models.OrderException, updatedOrder.Status)
+	}
+
+	var exception models.ExceptionRecord
+	if err := db.First(&exception, info.ID).Error; err != nil {
+		t.Fatalf("query exception failed: %v", err)
+	}
+	if exception.ReporterID != customer.ID {
+		t.Fatalf("expected reporter id %d, got %d", customer.ID, exception.ReporterID)
 	}
 }

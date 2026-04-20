@@ -37,9 +37,8 @@
       <div class="order-panel__toolbar">
         <div>
           <p class="eyebrow">Console Actions</p>
-          <strong>支持查单、录单、状态流转与日志回看</strong>
+          <strong>支持查单、状态流转与日志回看</strong>
         </div>
-        <el-button v-if="canCreateOrder" type="primary" @click="createDialogVisible = true">录入新订单</el-button>
       </div>
 
       <el-form :inline="true" :model="filters" class="order-filters" @submit.prevent>
@@ -168,8 +167,6 @@
       </div>
     </div>
 
-    <OrderCreateDialog v-model="createDialogVisible" @created="handleOrderCreated" />
-
     <el-drawer v-model="detailDrawerVisible" size="62%" title="订单详情">
       <div class="order-drawer" v-loading="detailLoading">
         <template v-if="detailOrder">
@@ -192,7 +189,12 @@
           </div>
 
           <div class="order-detail__toolbar">
+            <el-button type="primary" plain @click="printShippingLabel()" :disabled="!detailOrder">打印面单</el-button>
+            <el-button type="primary" plain @click="printHandoverSheet()" :disabled="!detailOrder">打印交接单</el-button>
             <el-button v-if="canUpdateStatus" type="primary" plain @click="openStatusDialog(detailOrder)">推进状态</el-button>
+            <el-button v-if="canManageCustoms" type="success" plain @click="openCustomsDialog()">维护清关</el-button>
+            <el-button v-if="canManageCustoms" type="warning" plain @click="openCustomsNodeDialog()">新增清关节点</el-button>
+            <el-button v-if="canManageCustoms" type="danger" plain @click="openCustomsExceptionDialog()">关务异常</el-button>
             <el-button type="warning" plain :disabled="!canCancel(detailOrder.status)" @click="cancelOrder(detailOrder)">
               取消订单
             </el-button>
@@ -316,6 +318,62 @@
                 </div>
               </dl>
             </article>
+
+            <article class="order-detail-card">
+              <h3>清关信息</h3>
+              <dl>
+                <div>
+                  <dt>申报品名</dt>
+                  <dd>{{ normalizeText(detailOrder.customs.customs_declaration, '未填写') }}</dd>
+                </div>
+                <div>
+                  <dt>HS Code</dt>
+                  <dd>{{ normalizeText(detailOrder.customs.hs_code, '未填写') }}</dd>
+                </div>
+                <div>
+                  <dt>申报价值</dt>
+                  <dd>{{ formatAmount(detailOrder.customs.declared_value, detailOrder.currency) }}</dd>
+                </div>
+                <div>
+                  <dt>清关状态</dt>
+                  <dd>{{ normalizeText(detailOrder.customs.customs_status_name, '待申报') }}</dd>
+                </div>
+                <div>
+                  <dt>税费</dt>
+                  <dd>
+                    关税 {{ formatAmount(detailOrder.customs.customs_duty, detailOrder.currency) }} /
+                    增值税 {{ formatAmount(detailOrder.customs.customs_vat, detailOrder.currency) }}
+                  </dd>
+                </div>
+                <div>
+                  <dt>其他税费 / 合计</dt>
+                  <dd>{{ formatAmount(detailOrder.customs.customs_other_tax, detailOrder.currency) }} / {{ formatAmount(detailOrder.customs.customs_fee, detailOrder.currency) }}</dd>
+                </div>
+              </dl>
+            </article>
+          </div>
+
+          <div class="order-detail-card order-detail-card--full">
+            <div class="order-detail-card__head">
+              <h3>清关节点</h3>
+              <span>{{ detailOrder.customs_nodes.length }} 条</span>
+            </div>
+            <div v-if="detailOrder.customs_nodes.length" class="order-log-list">
+              <article v-for="item in detailOrder.customs_nodes" :key="item.id">
+                <div class="order-log-list__head">
+                  <strong>{{ item.node_name }}</strong>
+                  <span>{{ item.node_time_text }}</span>
+                </div>
+                <p>{{ item.node_status_name }} · {{ normalizeText(item.operator_name, '系统') }}</p>
+                <small>
+                  关税 {{ formatAmount(item.duty_amount, detailOrder.currency) }} /
+                  增值税 {{ formatAmount(item.vat_amount, detailOrder.currency) }} /
+                  其他 {{ formatAmount(item.other_tax_amount, detailOrder.currency) }}
+                </small>
+                <small>{{ normalizeText(item.remark, '无备注') }}</small>
+              </article>
+            </div>
+            <el-empty v-else description="暂无清关节点" />
           </div>
 
           <div class="order-detail-card order-detail-card--full">
@@ -419,6 +477,98 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="customsDialogVisible" title="维护清关信息" width="620px">
+      <el-form label-position="top">
+        <div class="order-detail__toolbar" style="margin-bottom: 0.5rem;">
+          <el-button plain :loading="customsSuggesting" @click="suggestCustomsHSCode">自动匹配 HS Code</el-button>
+        </div>
+        <p v-if="customsSuggestion?.suggestion" class="create-order-tip">
+          推荐：{{ customsSuggestion.suggestion.hs_code }} / {{ customsSuggestion.suggestion.customs_declaration }}
+          <template v-if="customsSuggestion.suggestion.reason"> · {{ customsSuggestion.suggestion.reason }}</template>
+        </p>
+        <div class="tracking-form-grid">
+          <el-form-item label="申报品名">
+            <el-input v-model="customsForm.customs_declaration" placeholder="请输入申报品名" />
+          </el-form-item>
+          <el-form-item label="HS Code">
+            <el-input v-model="customsForm.hs_code" placeholder="请输入 HS Code" />
+          </el-form-item>
+          <el-form-item label="申报价值">
+            <el-input-number v-model="customsForm.declared_value" :min="0" :step="10" :precision="2" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="清关状态">
+            <el-input v-model="customsForm.customs_status" placeholder="如：declared / reviewing / released" />
+          </el-form-item>
+          <el-form-item label="关税">
+            <el-input-number v-model="customsForm.customs_duty" :min="0" :step="10" :precision="2" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="增值税">
+            <el-input-number v-model="customsForm.customs_vat" :min="0" :step="10" :precision="2" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="其他税费">
+            <el-input-number v-model="customsForm.customs_other_tax" :min="0" :step="10" :precision="2" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="备注" class="tracking-form-grid__wide">
+            <el-input v-model="customsForm.remark" type="textarea" :rows="3" maxlength="300" show-word-limit placeholder="可选，填写清关备注" />
+          </el-form-item>
+        </div>
+      </el-form>
+      <template #footer>
+        <el-button @click="customsDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="customsSubmitting" @click="submitCustomsUpdate">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="customsNodeDialogVisible" title="新增清关节点" width="560px">
+      <el-form label-position="top">
+        <el-form-item label="节点">
+          <el-select v-model="customsNodeForm.node_code" placeholder="请选择节点" style="width: 100%">
+            <el-option v-for="item in ['declared', 'documents_ready', 'reviewing', 'duty_pending', 'duty_paid', 'inspection', 'released', 'customs_exception']" :key="item" :label="customsNodeCodeLabel(item)" :value="item" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="节点状态">
+          <el-radio-group v-model="customsNodeForm.node_status">
+            <el-radio value="completed">已完成</el-radio>
+            <el-radio value="pending">待处理</el-radio>
+            <el-radio value="failed">失败</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <div class="tracking-form-grid">
+          <el-form-item label="关税">
+            <el-input-number v-model="customsNodeForm.duty_amount" :min="0" :step="10" :precision="2" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="增值税">
+            <el-input-number v-model="customsNodeForm.vat_amount" :min="0" :step="10" :precision="2" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="其他税费">
+            <el-input-number v-model="customsNodeForm.other_tax_amount" :min="0" :step="10" :precision="2" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="备注" class="tracking-form-grid__wide">
+            <el-input v-model="customsNodeForm.remark" type="textarea" :rows="3" maxlength="300" show-word-limit placeholder="请输入节点说明" />
+          </el-form-item>
+        </div>
+      </el-form>
+      <template #footer>
+        <el-button @click="customsNodeDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="customsNodeSubmitting" @click="submitCustomsNode">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="customsExceptionDialogVisible" title="上报关务异常" width="560px">
+      <el-form label-position="top">
+        <el-form-item label="异常描述">
+          <el-input v-model="customsExceptionForm.description" type="textarea" :rows="4" maxlength="600" show-word-limit placeholder="请输入关务异常描述" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="customsExceptionForm.remark" type="textarea" :rows="3" maxlength="300" show-word-limit placeholder="可选，填写补充说明" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="customsExceptionDialogVisible = false">取消</el-button>
+        <el-button type="danger" :loading="customsExceptionSubmitting" @click="submitCustomsException">确认上报</el-button>
+      </template>
+    </el-dialog>
   </section>
 </template>
 
@@ -427,8 +577,8 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRoute } from 'vue-router'
 
-import OrderCreateDialog from '@/components/OrderCreateDialog.vue'
 import http from '@/utils/http'
+import { printHtmlDocument, renderPrintFieldGrid, renderPrintHead, renderPrintTable, joinPrintLines } from '@/utils/print'
 import { useAuthStore } from '@/stores/auth'
 import { readQueryNumber, readQueryString } from '@/utils/workbench'
 
@@ -485,6 +635,49 @@ type CountryStatistic = {
   country: string
   count: number
   total_amount: number
+}
+
+type OrderCustomsInfo = {
+  customs_declaration: string
+  hs_code: string
+  declared_value: number
+  customs_duty: number
+  customs_vat: number
+  customs_other_tax: number
+  customs_fee: number
+  customs_status: string
+  customs_status_name: string
+}
+
+type OrderCustomsNodeInfo = {
+  id: number
+  node_code: string
+  node_name: string
+  node_status: string
+  node_status_name: string
+  duty_amount: number
+  vat_amount: number
+  other_tax_amount: number
+  operator_id: number
+  operator_name: string
+  remark: string
+  node_time: number
+  node_time_text: string
+}
+
+type HSCodeSuggestionItem = {
+  hs_code: string
+  customs_declaration: string
+  category: string
+  confidence: string
+  reason: string
+}
+
+type HSCodeSuggestResponse = {
+  matched: boolean
+  suggestion?: HSCodeSuggestionItem
+  alternatives: HSCodeSuggestionItem[]
+  note: string
 }
 
 type OrderStatisticsResponse = {
@@ -574,6 +767,8 @@ type OrderDetail = {
   delivery_time: number
   sign_time: number
   remark: string
+  customs: OrderCustomsInfo
+  customs_nodes: OrderCustomsNodeInfo[]
   packages: OrderPackageInfo[]
   child_orders: OrderRelationSummary[]
 }
@@ -614,7 +809,9 @@ const statusLogs = ref<OrderStatusLogItem[]>([])
 const transitions = ref<StatusTransitionOption[]>([])
 const detailDrawerVisible = ref(false)
 const statusDialogVisible = ref(false)
-const createDialogVisible = ref(false)
+const customsDialogVisible = ref(false)
+const customsNodeDialogVisible = ref(false)
+const customsExceptionDialogVisible = ref(false)
 const currentOrderId = ref<number | null>(null)
 
 const pagination = reactive({
@@ -651,9 +848,43 @@ const statusForm = reactive({
   remark: '',
 })
 
+const customsForm = reactive({
+  customs_declaration: '',
+  hs_code: '',
+  declared_value: 0,
+  customs_duty: 0,
+  customs_vat: 0,
+  customs_other_tax: 0,
+  customs_status: '',
+  remark: '',
+})
+
+const customsNodeForm = reactive({
+  node_code: '',
+  node_status: 'completed',
+  duty_amount: 0,
+  vat_amount: 0,
+  other_tax_amount: 0,
+  remark: '',
+})
+
+const customsExceptionForm = reactive({
+  description: '',
+  remark: '',
+})
+
+const customsSubmitting = ref(false)
+const customsNodeSubmitting = ref(false)
+const customsExceptionSubmitting = ref(false)
+const customsSuggesting = ref(false)
+const customsSuggestion = ref<HSCodeSuggestResponse | null>(null)
+
 const statusOptions = [
   { value: 1, label: '待处理' },
   { value: 2, label: '已接单' },
+  { value: 13, label: '待揽收' },
+  { value: 14, label: '揽收中' },
+  { value: 15, label: '已揽收' },
   { value: 3, label: '已入库' },
   { value: 4, label: '分拣中' },
   { value: 5, label: '运输中' },
@@ -667,7 +898,7 @@ const statusOptions = [
 ]
 
 const canUpdateStatus = computed(() => [6, 7].includes(authStore.user?.role || 0))
-const canCreateOrder = computed(() => [2, 5, 7].includes(authStore.user?.role || 0))
+const canManageCustoms = computed(() => [5, 6, 7].includes(authStore.user?.role || 0))
 const pendingCount = computed(() => getStatusCount(1))
 const exceptionCount = computed(() => getStatusCount(11))
 const topTransportModes = computed(() => statistics.by_transport_mode.slice(0, 3))
@@ -761,6 +992,115 @@ function relationTypeLabel(type: string) {
     merge_child: '合单子单',
   }
   return mapping[type] || '普通订单'
+}
+
+function customsNodeCodeLabel(code: string) {
+  const mapping: Record<string, string> = {
+    declared: '申报已提交',
+    documents_ready: '资料齐备',
+    reviewing: '海关审核中',
+    duty_pending: '税费待缴',
+    duty_paid: '税费已缴',
+    inspection: '查验处理中',
+    released: '清关放行',
+    customs_exception: '关务异常',
+  }
+  return mapping[code] || '未知节点'
+}
+
+function printShippingLabel() {
+  if (!detailOrder.value) return
+  const order = detailOrder.value
+  const receiverAddress = formatAddress(order.receiver_country, order.receiver_province, order.receiver_city, order.receiver_address)
+  const senderAddress = formatAddress(order.sender_country, order.sender_province, order.sender_city, order.sender_address)
+  const parcels = order.packages?.length ? order.packages.map((item) => item.parcel_no).join(' / ') : '整单'
+  const html = `
+    ${renderPrintHead('物流面单', order.order_no, statusName(order.status))}
+    <section class="label-shell">
+      <div class="label-top">
+        <div>
+          <div class="label-code">${order.order_no}</div>
+          <p>包裹号：${parcels}</p>
+        </div>
+        <span class="print-chip">${transportModeLabel(order.transport_mode)}</span>
+      </div>
+      <div class="label-route">${escapeHtmlLine(order.sender_city)} → ${escapeHtmlLine(order.receiver_city)}</div>
+      <div class="label-contact">收件人：${escapeHtmlLine(order.receiver_name)} / ${escapeHtmlLine(order.receiver_phone)}</div>
+      <div class="label-address">${escapeHtmlLine(receiverAddress)}</div>
+      <div class="label-meta">
+        <div>发件：${escapeHtmlLine(order.sender_name)}</div>
+        <div>发件电话：${escapeHtmlLine(order.sender_phone)}</div>
+        <div>发件地址：${escapeHtmlLine(senderAddress)}</div>
+      </div>
+    </section>
+    <section class="print-note">面单打印时间：${escapeHtmlLine(formatTimestamp(Date.now()))}</section>
+  `
+  printHtmlDocument(`面单-${order.order_no}`, html)
+}
+
+function printHandoverSheet() {
+  if (!detailOrder.value) return
+  const order = detailOrder.value
+  const packageRows = (order.packages?.length ? order.packages : [{
+    id: 0,
+    order_id: order.id,
+    order_no: order.order_no,
+    parcel_no: '整单',
+    package_type: 'normal',
+    goods_name: order.goods_name,
+    goods_category: order.goods_category,
+    weight: order.goods_weight,
+    volume: order.goods_volume,
+    quantity: order.goods_quantity,
+    goods_value: order.goods_value,
+    insured_amount: order.insured_amount,
+    remark: order.remark,
+  }]).map((item, index) => [
+    String(index + 1),
+    item.parcel_no || '整单',
+    normalizeText(item.goods_name),
+    `${Number(item.weight || 0).toFixed(2)} kg`,
+    String(item.quantity || 0),
+    normalizeText(item.remark, '-'),
+  ])
+
+  const html = `
+    ${renderPrintHead('订单交接单', order.order_no, statusName(order.status))}
+    ${renderPrintFieldGrid([
+      {
+        title: '订单信息',
+        fields: [
+          { label: '订单号', value: order.order_no },
+          { label: '运输方式', value: transportModeLabel(order.transport_mode) },
+          { label: '订单状态', value: statusName(order.status) },
+          { label: '下单时间', value: formatTimestamp(order.order_time) },
+        ],
+      },
+      {
+        title: '线路信息',
+        fields: [
+          { label: '发件地', value: formatAddress(order.sender_country, order.sender_province, order.sender_city, order.sender_address) },
+          { label: '收件地', value: formatAddress(order.receiver_country, order.receiver_province, order.receiver_city, order.receiver_address) },
+          { label: '发件人', value: joinPrintLines([order.sender_name, order.sender_phone]) || '-' },
+          { label: '收件人', value: joinPrintLines([order.receiver_name, order.receiver_phone]) || '-' },
+        ],
+      },
+    ])}
+    ${renderPrintTable('包裹清单', ['序号', '包裹号', '货物名称', '重量', '件数', '备注'], packageRows)}
+    <section class="print-grid">
+      <article class="print-card"><h2>交接签字</h2><dl><dt>交出人</dt><dd>________________</dd><dt>接收人</dt><dd>________________</dd></dl></article>
+      <article class="print-card"><h2>时间备注</h2><dl><dt>打印时间</dt><dd>${formatTimestamp(Date.now())}</dd><dt>备注</dt><dd>${normalizeText(order.remark, '无')}</dd></dl></article>
+    </section>
+  `
+  printHtmlDocument(`交接单-${order.order_no}`, html)
+}
+
+function escapeHtmlLine(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
 }
 
 function getStatusCount(status: number) {
@@ -866,14 +1206,39 @@ function handleSizeChange(size: number) {
   void loadOrders()
 }
 
-async function handleOrderCreated(payload: { order_id: number }) {
-  await refreshOverview()
-  await openDetail({ id: payload.order_id })
-}
-
 async function loadOrderTransitions(orderId: number) {
   const data = await http.get<never, AllowedTransitionsResponse>(`/orders/${orderId}/transitions`)
   transitions.value = data.allowed_statuses || []
+}
+
+function openCustomsDialog() {
+  if (!detailOrder.value) return
+  customsForm.customs_declaration = detailOrder.value.customs.customs_declaration || ''
+  customsForm.hs_code = detailOrder.value.customs.hs_code || ''
+  customsForm.declared_value = detailOrder.value.customs.declared_value || 0
+  customsForm.customs_duty = detailOrder.value.customs.customs_duty || 0
+  customsForm.customs_vat = detailOrder.value.customs.customs_vat || 0
+  customsForm.customs_other_tax = detailOrder.value.customs.customs_other_tax || 0
+  customsForm.customs_status = detailOrder.value.customs.customs_status || ''
+  customsForm.remark = ''
+  customsSuggestion.value = null
+  customsDialogVisible.value = true
+}
+
+function openCustomsNodeDialog() {
+  customsNodeForm.node_code = 'declared'
+  customsNodeForm.node_status = 'completed'
+  customsNodeForm.duty_amount = 0
+  customsNodeForm.vat_amount = 0
+  customsNodeForm.other_tax_amount = 0
+  customsNodeForm.remark = ''
+  customsNodeDialogVisible.value = true
+}
+
+function openCustomsExceptionDialog() {
+  customsExceptionForm.description = ''
+  customsExceptionForm.remark = ''
+  customsExceptionDialogVisible.value = true
 }
 
 async function loadOrderDetailBundle(orderId: number) {
@@ -896,6 +1261,122 @@ async function openDetail(order: Pick<OrderItem, 'id'>) {
     await loadOrderDetailBundle(order.id)
   } finally {
     detailLoading.value = false
+  }
+}
+
+async function submitCustomsUpdate() {
+  if (!currentOrderId.value) return
+  customsSubmitting.value = true
+  try {
+    await http.put(`/orders/${currentOrderId.value}/customs`, {
+      customs_declaration: customsForm.customs_declaration.trim(),
+      hs_code: customsForm.hs_code.trim(),
+      declared_value: Number(customsForm.declared_value),
+      customs_duty: Number(customsForm.customs_duty),
+      customs_vat: Number(customsForm.customs_vat),
+      customs_other_tax: Number(customsForm.customs_other_tax),
+      customs_status: customsForm.customs_status.trim(),
+      remark: customsForm.remark.trim(),
+    })
+    ElMessage.success('清关信息已更新')
+    customsDialogVisible.value = false
+    await Promise.all([loadOrders(), loadStatistics()])
+    if (detailDrawerVisible.value) {
+      detailLoading.value = true
+      try {
+        await loadOrderDetailBundle(currentOrderId.value)
+      } finally {
+        detailLoading.value = false
+      }
+    }
+  } finally {
+    customsSubmitting.value = false
+  }
+}
+
+async function suggestCustomsHSCode() {
+  if (!detailOrder.value) return
+  customsSuggesting.value = true
+  try {
+    const data = await http.post<never, HSCodeSuggestResponse>('/orders/hs-suggest', {
+      goods_name: detailOrder.value.goods_name,
+      goods_category: detailOrder.value.goods_category,
+      customs_declaration: customsForm.customs_declaration.trim(),
+      packages: (detailOrder.value.packages || []).map((item) => ({
+        parcel_no: item.parcel_no,
+        goods_name: item.goods_name,
+        goods_category: item.goods_category,
+        weight: item.weight,
+        volume: item.volume,
+        quantity: item.quantity,
+        goods_value: item.goods_value,
+        remark: item.remark,
+      })),
+    })
+    customsSuggestion.value = data
+    if (data.suggestion) {
+      customsForm.hs_code = data.suggestion.hs_code
+      if (!customsForm.customs_declaration.trim()) {
+        customsForm.customs_declaration = data.suggestion.customs_declaration
+      }
+      ElMessage.success(`已匹配 HS Code：${data.suggestion.hs_code}`)
+    } else {
+      ElMessage.warning(data.note || '未匹配到常见 HS Code')
+    }
+  } finally {
+    customsSuggesting.value = false
+  }
+}
+
+async function submitCustomsNode() {
+  if (!currentOrderId.value || !customsNodeForm.node_code) return
+  customsNodeSubmitting.value = true
+  try {
+    await http.post(`/orders/${currentOrderId.value}/customs/nodes`, {
+      node_code: customsNodeForm.node_code,
+      node_status: customsNodeForm.node_status,
+      duty_amount: Number(customsNodeForm.duty_amount),
+      vat_amount: Number(customsNodeForm.vat_amount),
+      other_tax_amount: Number(customsNodeForm.other_tax_amount),
+      remark: customsNodeForm.remark.trim(),
+    })
+    ElMessage.success('清关节点已记录')
+    customsNodeDialogVisible.value = false
+    await Promise.all([loadOrders(), loadStatistics()])
+    if (detailDrawerVisible.value) {
+      detailLoading.value = true
+      try {
+        await loadOrderDetailBundle(currentOrderId.value)
+      } finally {
+        detailLoading.value = false
+      }
+    }
+  } finally {
+    customsNodeSubmitting.value = false
+  }
+}
+
+async function submitCustomsException() {
+  if (!currentOrderId.value || !customsExceptionForm.description.trim()) return
+  customsExceptionSubmitting.value = true
+  try {
+    await http.post(`/orders/${currentOrderId.value}/customs/exception`, {
+      description: customsExceptionForm.description.trim(),
+      remark: customsExceptionForm.remark.trim(),
+    })
+    ElMessage.success('关务异常已上报')
+    customsExceptionDialogVisible.value = false
+    await Promise.all([loadOrders(), loadStatistics()])
+    if (detailDrawerVisible.value) {
+      detailLoading.value = true
+      try {
+        await loadOrderDetailBundle(currentOrderId.value)
+      } finally {
+        detailLoading.value = false
+      }
+    }
+  } finally {
+    customsExceptionSubmitting.value = false
   }
 }
 
@@ -988,6 +1469,11 @@ onMounted(async () => {
 }
 
 .order-goods small {
+  color: var(--muted);
+}
+
+.create-order-tip {
+  margin: 0 0 0.9rem;
   color: var(--muted);
 }
 

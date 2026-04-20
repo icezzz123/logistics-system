@@ -36,7 +36,7 @@ func (ctrl *ExceptionController) CreateException(c *gin.Context) {
 		utils.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
 		return
 	}
-	result, err := ctrl.service.CreateException(userID, userRole, &req)
+	result, err := ctrl.service.CreateExceptionForUser(userID, userRole, &req)
 	if err != nil {
 		utils.Error(c, http.StatusBadRequest, err.Error())
 		return
@@ -50,7 +50,17 @@ func (ctrl *ExceptionController) GetExceptionList(c *gin.Context) {
 		utils.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
 		return
 	}
-	result, err := ctrl.service.GetExceptionList(&req)
+	userID, ok := middleware.GetCurrentUserID(c)
+	if !ok {
+		utils.Unauthorized(c, "鏈幏鍙栧埌褰撳墠鐢ㄦ埛淇℃伅")
+		return
+	}
+	userRole, ok := middleware.GetCurrentUserRole(c)
+	if !ok {
+		utils.Unauthorized(c, "鏈幏鍙栧埌褰撳墠鐢ㄦ埛瑙掕壊")
+		return
+	}
+	result, err := ctrl.service.GetExceptionListForUser(userID, userRole, &req)
 	if err != nil {
 		utils.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -64,7 +74,17 @@ func (ctrl *ExceptionController) GetException(c *gin.Context) {
 		utils.Error(c, http.StatusBadRequest, "无效的异常ID")
 		return
 	}
-	result, err := ctrl.service.GetExceptionByID(uint(id))
+	userID, ok := middleware.GetCurrentUserID(c)
+	if !ok {
+		utils.Unauthorized(c, "鏈幏鍙栧埌褰撳墠鐢ㄦ埛淇℃伅")
+		return
+	}
+	userRole, ok := middleware.GetCurrentUserRole(c)
+	if !ok {
+		utils.Unauthorized(c, "鏈幏鍙栧埌褰撳墠鐢ㄦ埛瑙掕壊")
+		return
+	}
+	result, err := ctrl.service.GetExceptionByIDForUser(uint(id), userID, userRole)
 	if err != nil {
 		if err.Error() == "异常记录不存在" {
 			utils.Error(c, http.StatusNotFound, err.Error())

@@ -208,9 +208,10 @@
                   </div>
                 </div>
                 <el-form :model="scanForm" label-position="top">
-                  <el-form-item label="任务">
-                    <el-select v-model="scanForm.task_id" placeholder="请选择任务" style="width: 100%">
-                      <el-option v-for="item in taskOptionsForScan" :key="item.id" :label="item.task_no" :value="item.id" />
+                  <el-form-item label="任务号">
+                    <el-select v-model="scanForm.task_no" clearable placeholder="可选，优先锁定任务" style="width: 100%">
+                      <el-option label="自动识别任务" value="" />
+                      <el-option v-for="item in taskOptionsForScan" :key="item.id" :label="item.task_no" :value="item.task_no" />
                     </el-select>
                   </el-form-item>
                   <el-form-item label="扫描类型">
@@ -220,7 +221,7 @@
                     </el-radio-group>
                   </el-form-item>
                   <el-form-item label="扫描码">
-                    <el-input v-model="scanForm.scan_code" placeholder="请输入任务编号或订单号" />
+                    <el-input v-model="scanForm.scan_code" placeholder="请输入任务号、订单号或包裹号" />
                   </el-form-item>
                   <el-form-item label="站点">
                     <el-select v-model="scanForm.station_id" placeholder="请选择站点" style="width: 100%">
@@ -235,7 +236,7 @@
                 <div v-if="scanResult" class="scan-result">
                   <el-tag :type="scanForm.scan_type === 'load' ? 'success' : 'info'" effect="dark">{{ scanResult.scan_type === 'load' ? '装车完成' : '卸车完成' }}</el-tag>
                   <p>{{ scanResult.message }}</p>
-                  <small>{{ scanResult.task_no }} / {{ scanResult.order_no }} / {{ normalizeText(scanResult.station_name) }}</small>
+                  <small>{{ scanResult.task_no }} / {{ scanResult.order_no }} / {{ scanResult.parcel_no || '整单' }} / {{ normalizeText(scanResult.station_name) }}</small>
                 </div>
               </div>
 
@@ -484,7 +485,7 @@ type CostOverview = { total_tasks: number; total_distance: number; total_cost: n
 type CostTask = { task_id: number; task_no: string; order_id: number; order_no: string; vehicle_id: number; plate_number: string; driver_id: number; driver_name: string; status: string; status_name: string; distance: number; cost: number; cost_per_km: number; estimated_hours: number; actual_hours: number; load_count: number; unload_count: number; cost_level: string; compensation_amount: number; create_time: string; update_time: string }
 type CostTaskListResponse = { list: CostTask[]; total: number; page: number; page_size: number; pages: number }
 type TransportStats = { vehicle_stats: { total_vehicles: number; available_vehicles: number; maintenance_vehicles: number; total_capacity: number; avg_capacity: number }; task_stats: { total_tasks: number; pending_tasks: number; in_progress_tasks: number; completed_tasks: number; cancelled_tasks: number; total_distance: number; total_cost: number }; driver_stats: Array<{ driver_id: number; driver_name: string; task_count: number; distance: number; cost: number }>; status_stats: Array<{ status: string; status_name: string; count: number; percentage: string }> }
-type ScanResult = { task_id: number; task_no: string; order_id: number; order_no: string; scan_type: string; station_id: number; station_name: string; record_id: number; task_status: string; task_status_name: string; order_status: number; order_status_name: string; message: string }
+type ScanResult = { task_id: number; task_no: string; order_id: number; order_no: string; parcel_no?: string; scan_code_type?: string; scan_type: string; station_id: number; station_name: string; record_id: number; task_status: string; task_status_name: string; order_status: number; order_status_name: string; message: string }
 
 const taskStatusOptions = [ { value: 'pending', label: '待执行' }, { value: 'in_progress', label: '执行中' }, { value: 'completed', label: '已完成' }, { value: 'cancelled', label: '已取消' } ]
 const route = useRoute()
@@ -537,7 +538,7 @@ const taskForm = reactive({ order_id: undefined as number | undefined, vehicle_i
 const taskRules: FormRules<typeof taskForm> = { order_id: [{ required: true, message: '请选择订单', trigger: 'change' }], vehicle_id: [{ required: true, message: '请选择车辆', trigger: 'change' }], driver_id: [{ required: true, message: '请选择司机', trigger: 'change' }], start_point: [{ required: true, message: '请输入起点', trigger: 'blur' }], end_point: [{ required: true, message: '请输入终点', trigger: 'blur' }] }
 
 const taskStatusForm = reactive({ status: undefined as string | undefined, remark: '' })
-const scanForm = reactive({ task_id: undefined as number | undefined, scan_type: 'load', scan_code: '', station_id: undefined as number | undefined, remark: '' })
+const scanForm = reactive({ task_no: '', scan_type: 'load', scan_code: '', station_id: undefined as number | undefined, remark: '' })
 
 const vehicleOptions = computed(() => vehicles.value)
 const driverOptions = computed(() => userOptions.value.filter((item) => item.status === 1 && item.role >= 2))
@@ -600,8 +601,8 @@ function openTaskDialog(task?: TaskItem) { if (task) { taskDialogMode.value = 'e
 async function submitTaskDialog() { if (!taskFormRef.value) return; const valid = await taskFormRef.value.validate().catch(() => false); if (!valid) return; taskSubmitting.value = true; try { const payload = { order_id: taskForm.order_id, vehicle_id: taskForm.vehicle_id, driver_id: taskForm.driver_id, start_point: taskForm.start_point.trim(), end_point: taskForm.end_point.trim(), distance: Number(taskForm.distance), cost: Number(taskForm.cost), remark: taskForm.remark.trim() }; if (taskDialogMode.value === 'create') { await http.post('/transport/tasks', payload); ElMessage.success('运输任务已创建') } else if (currentTaskId.value) { await http.put(`/transport/tasks/${currentTaskId.value}`, payload); ElMessage.success('运输任务已更新') } taskDialogVisible.value = false; await Promise.all([loadTasks(), refreshTransportOverview()]) } finally { taskSubmitting.value = false } }
 function openTaskStatusDialog(task: TaskItem) { currentTaskForStatus.value = task; taskStatusForm.status = nextTaskStatuses(task.status)[0]?.value; taskStatusForm.remark = '' ; taskStatusDialogVisible.value = true }
 async function submitTaskStatus() { if (!currentTaskForStatus.value || !taskStatusForm.status) return; taskStatusSubmitting.value = true; try { await http.put(`/transport/tasks/${currentTaskForStatus.value.id}/status`, { status: taskStatusForm.status, remark: taskStatusForm.remark.trim() }); ElMessage.success('任务状态已更新'); taskStatusDialogVisible.value = false; await Promise.all([loadTasks(), refreshTransportOverview()]) } finally { taskStatusSubmitting.value = false } }
-function prefillScan(task: TaskItem, type: 'load' | 'unload') { activeTab.value = 'tasks'; scanForm.task_id = task.id; scanForm.scan_type = type; scanForm.scan_code = task.task_no; scanForm.station_id = undefined; scanForm.remark = '' }
-async function submitScan() { if (!scanForm.task_id || !scanForm.station_id || !scanForm.scan_code.trim()) { ElMessage.warning('请填写任务、扫描码和站点'); return } scanSubmitting.value = true; try { const endpoint = scanForm.scan_type === 'load' ? 'load-scan' : 'unload-scan'; scanResult.value = await http.post<never, ScanResult>(`/transport/tasks/${scanForm.task_id}/${endpoint}`, { scan_code: scanForm.scan_code.trim(), station_id: scanForm.station_id, remark: scanForm.remark.trim() }); ElMessage.success(scanResult.value.message); await Promise.all([loadTasks(), loadRecords(), refreshTransportOverview()]) } finally { scanSubmitting.value = false } }
+function prefillScan(task: TaskItem, type: 'load' | 'unload') { activeTab.value = 'tasks'; scanForm.task_no = task.task_no; scanForm.scan_type = type; scanForm.scan_code = task.order_no; scanForm.station_id = undefined; scanForm.remark = '' }
+async function submitScan() { if (!scanForm.station_id || !scanForm.scan_code.trim()) { ElMessage.warning('请填写扫描码和站点'); return } scanSubmitting.value = true; try { const endpoint = scanForm.scan_type === 'load' ? '/transport/scan/load' : '/transport/scan/unload'; scanResult.value = await http.post<never, ScanResult>(endpoint, { task_no: scanForm.task_no.trim(), scan_code: scanForm.scan_code.trim(), station_id: scanForm.station_id, remark: scanForm.remark.trim() }); ElMessage.success(scanResult.value.message); await Promise.all([loadTasks(), loadRecords(), refreshTransportOverview()]) } finally { scanSubmitting.value = false } }
 
 async function applyVehicleFilters() { vehiclePagination.page = 1; await loadVehicles() }
 function resetVehicleFilters() { vehicleFilters.plate_number = ''; vehicleFilters.vehicle_type = ''; vehicleFilters.driver_id = undefined; vehicleFilters.status = -1; vehiclePagination.page = 1; void loadVehicles() }

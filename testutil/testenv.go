@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -17,8 +18,9 @@ import (
 )
 
 var (
-	initOnce sync.Once
-	initErr  error
+	initOnce  sync.Once
+	initErr   error
+	uniqueSeq uint64
 )
 
 func EnsureTestDB(t *testing.T) *gorm.DB {
@@ -59,11 +61,12 @@ func loadDotEnvUpward() {
 }
 
 func Unique(prefix string) string {
-	return fmt.Sprintf("%s_%d", prefix, time.Now().UnixNano())
+	seq := atomic.AddUint64(&uniqueSeq, 1)
+	return fmt.Sprintf("%s_%d_%d", prefix, time.Now().UnixNano(), seq)
 }
 
 func UniquePhone() string {
-	n := time.Now().UnixNano()%1000000000 + 100000000
+	n := time.Now().UnixNano()%900000000 + 100000000
 	prefix := 3 + time.Now().UnixNano()%7
 	return fmt.Sprintf("1%d%d", prefix, n)
 }
@@ -113,6 +116,7 @@ func CreateTestStation(t *testing.T, stationType models.StationType) *models.Sta
 		t.Fatalf("create test station failed: %v", err)
 	}
 	t.Cleanup(func() {
+		_ = db.Where("station_id = ?", station.ID).Delete(&models.StationServiceArea{}).Error
 		_ = db.Where("station_id = ?", station.ID).Delete(&models.SortingRule{}).Error
 		_ = db.Where("station_id = ?", station.ID).Delete(&models.DeliveryRecord{}).Error
 		_ = db.Where("station_id = ?", station.ID).Delete(&models.ExceptionRecord{}).Error
@@ -243,6 +247,8 @@ func CleanupOrderData(t *testing.T, orderID uint) {
 	_ = db.Where("order_id IN ?", orderIDs).Delete(&models.TrackingRecord{}).Error
 	_ = db.Where("order_id IN ?", orderIDs).Delete(&models.OrderStatusLog{}).Error
 	_ = db.Where("order_id IN ?", orderIDs).Delete(&models.SignRecord{}).Error
+	_ = db.Where("order_id IN ?", orderIDs).Delete(&models.PickupTask{}).Error
+	_ = db.Where("order_id IN ?", orderIDs).Delete(&models.DeliveryTask{}).Error
 	_ = db.Where("order_id IN ?", orderIDs).Delete(&models.DeliveryRecord{}).Error
 	_ = db.Where("order_id IN ?", orderIDs).Delete(&models.TransportTask{}).Error
 	_ = db.Where("order_id IN ?", orderIDs).Delete(&models.SortingRecord{}).Error

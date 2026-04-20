@@ -13,7 +13,7 @@ type OrderPackageRequest struct {
 }
 
 type CreateOrderRequest struct {
-	CustomerID uint `json:"customer_id" binding:"required,min=1"`
+	CustomerID uint `json:"customer_id" binding:"omitempty,min=1"`
 
 	SenderName     string `json:"sender_name" binding:"required,max=50"`
 	SenderPhone    string `json:"sender_phone" binding:"required,max=20"`
@@ -31,15 +31,21 @@ type CreateOrderRequest struct {
 	ReceiverAddress  string `json:"receiver_address" binding:"required,max=255"`
 	ReceiverPostcode string `json:"receiver_postcode" binding:"omitempty,max=20"`
 
-	GoodsName     string                `json:"goods_name" binding:"required,max=100"`
-	GoodsCategory string                `json:"goods_category" binding:"omitempty,max=50"`
-	GoodsWeight   float64               `json:"goods_weight" binding:"required,gt=0"`
-	GoodsVolume   float64               `json:"goods_volume" binding:"omitempty,gte=0"`
-	GoodsQuantity int                   `json:"goods_quantity" binding:"omitempty,min=1"`
-	GoodsValue    float64               `json:"goods_value" binding:"omitempty,gte=0"`
-	IsInsured     int                   `json:"is_insured" binding:"omitempty,oneof=0 1"`
-	InsuredAmount float64               `json:"insured_amount" binding:"omitempty,gte=0"`
-	Packages      []OrderPackageRequest `json:"packages" binding:"omitempty,dive"`
+	GoodsName          string                `json:"goods_name" binding:"required,max=100"`
+	GoodsCategory      string                `json:"goods_category" binding:"omitempty,max=50"`
+	GoodsWeight        float64               `json:"goods_weight" binding:"required,gt=0"`
+	GoodsVolume        float64               `json:"goods_volume" binding:"omitempty,gte=0"`
+	GoodsQuantity      int                   `json:"goods_quantity" binding:"omitempty,min=1"`
+	GoodsValue         float64               `json:"goods_value" binding:"omitempty,gte=0"`
+	IsInsured          int                   `json:"is_insured" binding:"omitempty,oneof=0 1"`
+	InsuredAmount      float64               `json:"insured_amount" binding:"omitempty,gte=0"`
+	Packages           []OrderPackageRequest `json:"packages" binding:"omitempty,dive"`
+	CustomsDeclaration string                `json:"customs_declaration" binding:"omitempty,max=100"`
+	HSCode             string                `json:"hs_code" binding:"omitempty,max=30"`
+	DeclaredValue      float64               `json:"declared_value" binding:"omitempty,gte=0"`
+	CustomsDuty        float64               `json:"customs_duty" binding:"omitempty,gte=0"`
+	CustomsVAT         float64               `json:"customs_vat" binding:"omitempty,gte=0"`
+	CustomsOtherTax    float64               `json:"customs_other_tax" binding:"omitempty,gte=0"`
 
 	TransportMode int    `json:"transport_mode" binding:"required,min=1,max=5"`
 	ServiceType   string `json:"service_type" binding:"omitempty,max=20"`
@@ -269,6 +275,8 @@ type OrderDetailResponse struct {
 	Remark           string                 `json:"remark"`
 	CTime            int64                  `json:"ctime"`
 	MTime            int64                  `json:"mtime"`
+	Customs          OrderCustomsInfo       `json:"customs"`
+	CustomsNodes     []OrderCustomsNodeInfo `json:"customs_nodes"`
 	Packages         []OrderPackageInfo     `json:"packages"`
 	ChildOrders      []OrderRelationSummary `json:"child_orders"`
 }

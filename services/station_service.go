@@ -794,7 +794,7 @@ func (s *StationService) GetInventoryWarnings(req *dto.InventoryWarningQueryRequ
 	// 查询启用的站点
 	var stations []models.Station
 	query := db.Model(&models.Station{}).Where("status = 1")
-	
+
 	if req.StationID > 0 {
 		query = query.Where("id = ?", req.StationID)
 	}
@@ -883,7 +883,7 @@ func (s *StationService) determineWarningLevel(usageRate float64, currentCount, 
 	criticalThreshold := 0.9 // 90%
 
 	if usageRate >= criticalThreshold {
-		return "critical", 
+		return "critical",
 			fmt.Sprintf("库存严重超载！当前使用率%.1f%%，已达到严重预警线", usageRate*100),
 			"立即清理库存，转移部分货物到其他站点"
 	} else if usageRate >= warningThreshold {
@@ -945,6 +945,7 @@ func getIsFoundName(isFound int) string {
 	}
 	return "未找到"
 }
+
 // GetInventoryStats 获取库存统计报表
 func (s *StationService) GetInventoryStats(req *dto.InventoryStatsRequest) (*dto.InventoryStatsResponse, error) {
 	db := database.DB

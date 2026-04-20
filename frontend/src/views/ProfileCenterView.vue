@@ -39,6 +39,10 @@
           </article>
         </div>
       </div>
+
+      <div class="card-panel profile-panel">
+        <AddressBookManager />
+      </div>
     </div>
 
     <el-dialog v-model="editDialogVisible" title="编辑个人资料" width="520px">
@@ -71,6 +75,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 
+import AddressBookManager from '@/components/AddressBookManager.vue'
 import http from '@/utils/http'
 import { useAuthStore } from '@/stores/auth'
 
@@ -114,7 +119,7 @@ onMounted(async () => { await Promise.all([loadProfile(), loadPermissions()]) })
 </script>
 
 <style scoped>
-.profile-center-view { display: flex; flex-direction: column; gap: 1rem; }
+.profile-center-view, .profile-layout { display: flex; flex-direction: column; gap: 1rem; }
 .profile-hero, .profile-panel { padding: 1.5rem; }
 .profile-hero { display: flex; justify-content: space-between; gap: 1.5rem; }
 .profile-hero h1 { margin: 0; font-family: 'Georgia', 'Times New Roman', serif; font-size: clamp(2.2rem, 4vw, 3.4rem); }

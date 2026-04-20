@@ -5,7 +5,7 @@ import http from '@/utils/http';
 import { readQueryEnum, readQueryNumber } from '@/utils/workbench';
 const exceptionTypeOptions = [{ value: 1, label: '破损' }, { value: 2, label: '丢失' }, { value: 3, label: '延误' }, { value: 4, label: '错分' }, { value: 5, label: '拒收' }, { value: 6, label: '清关异常' }, { value: 7, label: '其他' }];
 const exceptionStatusOptions = [{ value: 1, label: '待处理' }, { value: 2, label: '处理中' }, { value: 3, label: '已解决' }, { value: 4, label: '已关闭' }];
-const orderStatusOptions = [{ value: 1, label: '待处理' }, { value: 2, label: '已接单' }, { value: 3, label: '已入库' }, { value: 4, label: '分拣中' }, { value: 5, label: '运输中' }, { value: 6, label: '清关中' }, { value: 7, label: '目的地分拣' }, { value: 8, label: '配送中' }, { value: 9, label: '已送达' }, { value: 10, label: '已签收' }, { value: 11, label: '异常' }, { value: 12, label: '已取消' }];
+const orderStatusOptions = [{ value: 1, label: '待处理' }, { value: 2, label: '已接单' }, { value: 13, label: '待揽收' }, { value: 14, label: '揽收中' }, { value: 15, label: '已揽收' }, { value: 3, label: '已入库' }, { value: 4, label: '分拣中' }, { value: 5, label: '运输中' }, { value: 6, label: '清关中' }, { value: 7, label: '目的地分拣' }, { value: 8, label: '配送中' }, { value: 9, label: '已送达' }, { value: 10, label: '已签收' }, { value: 11, label: '异常' }, { value: 12, label: '已取消' }];
 const route = useRoute();
 const activeTab = ref('list');
 const exceptions = ref([]);

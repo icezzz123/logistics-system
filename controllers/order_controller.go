@@ -1,4 +1,4 @@
-package controllers
+﻿package controllers
 
 import (
 	"fmt"
@@ -13,25 +13,24 @@ type OrderController struct {
 	orderService *services.OrderService
 }
 
-// NewOrderController 创建订单控制器实例
+// NewOrderController 閸掓稑缂撶拋銏犲礋閹貉冨煑閸ｃ劌鐤勬笟?
 func NewOrderController() *OrderController {
 	return &OrderController{
 		orderService: services.NewOrderService(),
 	}
 }
 
-// CreateOrder 创建订单
-// @Summary 创建订单
-// @Description 创建新的物流订单，系统自动计算运费
-// @Tags 订单管理
+// CreateOrder 閸掓稑缂撶拋銏犲礋
+// @Summary 閸掓稑缂撶拋銏犲礋
+// @Description 閸掓稑缂撻弬鎵畱閻椻晜绁︾拋銏犲礋閿涘瞼閮寸紒鐔诲殰閸斻劏顓哥粻妤勭箥鐠?
+// @Tags 鐠併垹宕熺粻锛勬倞
 // @Accept json
 // @Produce json
-// @Param body body dto.CreateOrderRequest true "订单信息"
+// @Param body body dto.CreateOrderRequest true "鐠併垹宕熸穱鈩冧紖"
 // @Success 200 {object} dto.CreateOrderResponse
 // @Router /api/orders [post]
 func (ctrl *OrderController) CreateOrder(c *gin.Context) {
-	// 获取当前登录用户ID
-	_, exists := c.Get("user_id")
+	userID, exists := c.Get("user_id")
 	if !exists {
 		utils.Unauthorized(c, "未登录")
 		return
@@ -42,30 +41,29 @@ func (ctrl *OrderController) CreateOrder(c *gin.Context) {
 		utils.Unauthorized(c, "未登录")
 		return
 	}
-	if role := userRole.(int); role != 2 && role != 5 && role != 7 {
-		utils.Forbidden(c, "当前角色无权录入新订单")
+	if role := userRole.(int); role != 1 {
+		utils.Forbidden(c, "仅客户账号可以创建订单")
 		return
 	}
 
-	// 绑定请求参数
 	var req dto.CreateOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequest(c, "参数错误: "+err.Error())
 		return
 	}
 
-	// 调用服务层创建订单
+	req.CustomerID = userID.(uint)
 	order, err := ctrl.orderService.CreateOrder(req.CustomerID, &req)
 	if err != nil {
 		utils.Error(c, 500, err.Error())
 		return
 	}
 
-	// 返回订单信息
 	packageCount := len(req.Packages)
 	if packageCount == 0 {
 		packageCount = 1
 	}
+
 	response := dto.CreateOrderResponse{
 		OrderID:       order.ID,
 		OrderNo:       order.OrderNo,
@@ -80,33 +78,31 @@ func (ctrl *OrderController) CreateOrder(c *gin.Context) {
 	utils.Success(c, response)
 }
 
-// GetOrderList 获取订单列表
-// @Summary 获取订单列表
-// @Description 支持分页、搜索和筛选的订单列表查询
-// @Tags 订单管理
+// GetOrderList 閼惧嘲褰囩拋銏犲礋閸掓銆?// @Summary 閼惧嘲褰囩拋銏犲礋閸掓銆?// @Description 閺€顖涘瘮閸掑棝銆夐妴浣规偝缁便垹鎷扮粵娑⑩偓澶屾畱鐠併垹宕熼崚妤勩€冮弻銉嚄
+// @Tags 鐠併垹宕熺粻锛勬倞
 // @Accept json
 // @Produce json
-// @Param page query int false "页码" default(1)
-// @Param page_size query int false "每页数量" default(10)
-// @Param order_no query string false "订单号（模糊搜索）"
-// @Param status query int false "订单状态"
-// @Param sender_country query string false "发件国家"
-// @Param receiver_country query string false "收件国家"
-// @Param start_time query int64 false "开始时间（Unix时间戳）"
-// @Param end_time query int64 false "结束时间（Unix时间戳）"
+// @Param page query int false "妞ょ數鐖? default(1)
+// @Param page_size query int false "濮ｅ繘銆夐弫浼村櫤" default(10)
+// @Param order_no query string false "璁㈠崟鍙凤紙妯＄硦鎼滅储锛?
+// @Param status query int false "璁㈠崟鐘舵€?
+// @Param sender_country query string false "閸欐垳娆㈤崶钘夘啀"
+// @Param receiver_country query string false "閺€鏈垫閸ヨ棄顔?
+// @Param start_time query int64 false "瀵偓婵妞傞梻杈剧礄Unix閺冨爼妫块幋绛圭礆"
+// @Param end_time query int64 false "缂佹挻娼弮鍫曟？閿涘湶nix閺冨爼妫块幋绛圭礆"
 // @Success 200 {object} dto.OrderListResponse
 // @Router /api/orders [get]
 func (ctrl *OrderController) GetOrderList(c *gin.Context) {
-	// 获取当前用户信息
+	// 閼惧嘲褰囪ぐ鎾冲閻劍鍩涙穱鈩冧紖
 	userID, exists := c.Get("user_id")
 	if !exists {
-		utils.Unauthorized(c, "未登录")
+        utils.Unauthorized(c, "未登录")
 		return
 	}
 
 	userRole, exists := c.Get("role")
 	if !exists {
-		utils.Unauthorized(c, "未登录")
+        utils.Unauthorized(c, "未登录")
 		return
 	}
 
@@ -117,7 +113,6 @@ func (ctrl *OrderController) GetOrderList(c *gin.Context) {
 		return
 	}
 
-	// 调用服务层
 	result, err := ctrl.orderService.GetOrderList(userID.(uint), userRole.(int), &req)
 	if err != nil {
 		utils.Error(c, 500, err.Error())
@@ -127,48 +122,46 @@ func (ctrl *OrderController) GetOrderList(c *gin.Context) {
 	utils.Success(c, result)
 }
 
-// GetOrderDetail 获取订单详情
-// @Summary 获取订单详情
-// @Description 根据订单ID获取订单详细信息
-// @Tags 订单管理
+// GetOrderDetail 閼惧嘲褰囩拋銏犲礋鐠囷附鍎?// @Summary 閼惧嘲褰囩拋銏犲礋鐠囷附鍎?// @Description 閺嶈宓佺拋銏犲礋ID閼惧嘲褰囩拋銏犲礋鐠囷妇绮忔穱鈩冧紖
+// @Tags 鐠併垹宕熺粻锛勬倞
 // @Accept json
 // @Produce json
-// @Param id path int true "订单ID"
+// @Param id path int true "鐠併垹宕烮D"
 // @Success 200 {object} models.Order
 // @Router /api/orders/{id} [get]
 func (ctrl *OrderController) GetOrderDetail(c *gin.Context) {
-	// 获取订单ID
+	// 閼惧嘲褰囩拋銏犲礋ID
 	orderIDParam := c.Param("id")
 	var orderID uint
 	if _, err := fmt.Sscanf(orderIDParam, "%d", &orderID); err != nil {
-		utils.BadRequest(c, "无效的订单ID")
+		utils.BadRequest(c, "閺冪姵鏅ラ惃鍕吂閸楁椌D")
 		return
 	}
 
-	// 获取当前用户信息
+	// 閼惧嘲褰囪ぐ鎾冲閻劍鍩涙穱鈩冧紖
 	userID, exists := c.Get("user_id")
 	if !exists {
-		utils.Unauthorized(c, "未登录")
+        utils.Unauthorized(c, "未登录")
 		return
 	}
 
 	userRole, exists := c.Get("role")
 	if !exists {
-		utils.Unauthorized(c, "未登录")
+        utils.Unauthorized(c, "未登录")
 		return
 	}
 
-	// 查询订单
+	// 閺屻儴顕楃拋銏犲礋
 	order, err := ctrl.orderService.GetOrderByID(orderID)
 	if err != nil {
 		utils.Error(c, 404, err.Error())
 		return
 	}
 
-	// 权限检查：普通用户只能查看自己的订单
+	// 閺夊啴妾哄Λ鈧弻銉窗閺咁噣鈧氨鏁ら幋宄板涧閼宠姤鐓￠惇瀣殰瀹歌京娈戠拋銏犲礋
 	if userRole.(int) != 6 && userRole.(int) != 7 {
 		if order.CustomerID != userID.(uint) {
-			utils.Forbidden(c, "无权查看此订单")
+            utils.Forbidden(c, "无权查看此订单")
 			return
 		}
 	}
@@ -182,35 +175,34 @@ func (ctrl *OrderController) GetOrderDetail(c *gin.Context) {
 	utils.Success(c, detail)
 }
 
-// UpdateOrderStatus 更新订单状态
-// @Summary 更新订单状态
-// @Description 管理员和调度员可以更新订单状态，需遵循状态机规则
-// @Tags 订单管理
+// UpdateOrderStatus 閺囧瓨鏌婄拋銏犲礋閻樿埖鈧?
+// @Summary 閺囧瓨鏌婄拋銏犲礋閻樿埖鈧?
+// @Description 缁狅紕鎮婇崨妯烘嫲鐠嬪啫瀹抽崨妯哄讲娴犮儲娲块弬鎷岊吂閸楁洜濮搁幀渚婄礉闂団偓闁潧鎯婇悩鑸碘偓浣规簚鐟欏嫬鍨?// @Tags 鐠併垹宕熺粻锛勬倞
 // @Accept json
 // @Produce json
-// @Param id path int true "订单ID"
-// @Param body body dto.UpdateOrderStatusRequest true "状态信息"
+// @Param id path int true "鐠併垹宕烮D"
+// @Param body body dto.UpdateOrderStatusRequest true "鐘舵€佷俊鎭?
 // @Success 200 {object} utils.Response
 // @Router /api/orders/{id}/status [put]
 func (ctrl *OrderController) UpdateOrderStatus(c *gin.Context) {
-	// 获取订单ID
+	// 閼惧嘲褰囩拋銏犲礋ID
 	orderIDParam := c.Param("id")
 	var orderID uint
 	if _, err := fmt.Sscanf(orderIDParam, "%d", &orderID); err != nil {
-		utils.BadRequest(c, "无效的订单ID")
+		utils.BadRequest(c, "閺冪姵鏅ラ惃鍕吂閸楁椌D")
 		return
 	}
 
-	// 获取当前用户信息
+	// 閼惧嘲褰囪ぐ鎾冲閻劍鍩涙穱鈩冧紖
 	userID, exists := c.Get("user_id")
 	if !exists {
-		utils.Unauthorized(c, "未登录")
+        utils.Unauthorized(c, "未登录")
 		return
 	}
 
 	userRole, exists := c.Get("role")
 	if !exists {
-		utils.Unauthorized(c, "未登录")
+        utils.Unauthorized(c, "未登录")
 		return
 	}
 
@@ -221,49 +213,46 @@ func (ctrl *OrderController) UpdateOrderStatus(c *gin.Context) {
 		return
 	}
 
-	// 调用服务层
 	if err := ctrl.orderService.UpdateOrderStatus(orderID, req.Status, userID.(uint), userRole.(int), req.Remark); err != nil {
 		utils.Error(c, 500, err.Error())
 		return
 	}
-
 	utils.Success(c, gin.H{
-		"message": "订单状态更新成功",
+        "message": "订单状态更新成功",
 	})
 }
 
-// UpdateOrder 修改订单信息
-// @Summary 修改订单信息
-// @Description 修改订单的收件人信息和备注（仅待处理状态可修改）
-// @Tags 订单管理
+// UpdateOrder 娣囶喗鏁肩拋銏犲礋娣団剝浼?// @Summary 娣囶喗鏁肩拋銏犲礋娣団剝浼?// @Description 娣囶喗鏁肩拋銏犲礋閻ㄥ嫭鏁规禒鏈垫眽娣団剝浼呴崪灞筋槵濞夘煉绱欐禒鍛窡婢跺嫮鎮婇悩鑸碘偓浣稿讲娣囶喗鏁奸敍?
+// @Tags 鐠併垹宕熺粻锛勬倞
 // @Accept json
 // @Produce json
-// @Param id path int true "订单ID"
-// @Param body body dto.UpdateOrderRequest true "修改信息"
+// @Param id path int true "鐠併垹宕烮D"
+// @Param body body dto.UpdateOrderRequest true "娣囶喗鏁兼穱鈩冧紖"
 // @Success 200 {object} utils.Response
 // @Router /api/orders/{id} [put]
 func (ctrl *OrderController) UpdateOrder(c *gin.Context) {
-	// 获取订单ID
+	// 閼惧嘲褰囩拋銏犲礋ID
 	orderIDParam := c.Param("id")
 	var orderID uint
 	if _, err := fmt.Sscanf(orderIDParam, "%d", &orderID); err != nil {
-		utils.BadRequest(c, "无效的订单ID")
+		utils.BadRequest(c, "閺冪姵鏅ラ惃鍕吂閸楁椌D")
 		return
 	}
 
-	// 获取当前用户信息
+	// 閼惧嘲褰囪ぐ鎾冲閻劍鍩涙穱鈩冧紖
 	userID, exists := c.Get("user_id")
 	if !exists {
-		utils.Unauthorized(c, "未登录")
+        utils.Unauthorized(c, "未登录")
 		return
 	}
 
 	userRole, exists := c.Get("role")
 	if !exists {
-		utils.Unauthorized(c, "未登录")
+        utils.Unauthorized(c, "未登录")
 		return
 	}
 
+	// 绑定请求参数
 	// 绑定请求参数
 	var req dto.UpdateOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -271,133 +260,128 @@ func (ctrl *OrderController) UpdateOrder(c *gin.Context) {
 		return
 	}
 
-	// 调用服务层
 	if err := ctrl.orderService.UpdateOrder(orderID, userID.(uint), userRole.(int), &req); err != nil {
 		utils.Error(c, 500, err.Error())
 		return
 	}
-
 	utils.Success(c, gin.H{
 		"message": "订单修改成功",
 	})
 }
-
-// CancelOrder 取消订单
-// @Summary 取消订单
-// @Description 取消订单（仅待处理和已接单状态可取消）
-// @Tags 订单管理
+// CancelOrder 閸欐牗绉风拋銏犲礋
+// @Summary 閸欐牗绉风拋銏犲礋
+// @Description 閸欐牗绉风拋銏犲礋閿涘牅绮庡鍛槱閻炲棗鎷板鍙夊复閸楁洜濮搁幀浣稿讲閸欐牗绉烽敍?
+// @Tags 鐠併垹宕熺粻锛勬倞
 // @Accept json
 // @Produce json
-// @Param id path int true "订单ID"
+// @Param id path int true "鐠併垹宕烮D"
 // @Success 200 {object} utils.Response
 // @Router /api/orders/{id}/cancel [put]
 func (ctrl *OrderController) CancelOrder(c *gin.Context) {
-	// 获取订单ID
+	// 閼惧嘲褰囩拋銏犲礋ID
 	orderIDParam := c.Param("id")
 	var orderID uint
 	if _, err := fmt.Sscanf(orderIDParam, "%d", &orderID); err != nil {
-		utils.BadRequest(c, "无效的订单ID")
+		utils.BadRequest(c, "閺冪姵鏅ラ惃鍕吂閸楁椌D")
 		return
 	}
 
-	// 获取当前用户信息
+	// 閼惧嘲褰囪ぐ鎾冲閻劍鍩涙穱鈩冧紖
 	userID, exists := c.Get("user_id")
 	if !exists {
-		utils.Unauthorized(c, "未登录")
+        utils.Unauthorized(c, "未登录")
 		return
 	}
 
 	userRole, exists := c.Get("role")
 	if !exists {
-		utils.Unauthorized(c, "未登录")
+        utils.Unauthorized(c, "未登录")
 		return
 	}
 
-	// 调用服务层
+	// 鐠嬪啰鏁ら張宥呭鐏?
 	if err := ctrl.orderService.CancelOrder(orderID, userID.(uint), userRole.(int)); err != nil {
 		utils.Error(c, 500, err.Error())
 		return
 	}
 
 	utils.Success(c, gin.H{
-		"message": "订单已取消",
+        "message": "订单已取消",
 	})
 }
 
-// DeleteOrder 删除订单
-// @Summary 删除订单
-// @Description 删除订单（仅管理员可删除已取消的订单）
-// @Tags 订单管理
+// DeleteOrder 閸掔娀娅庣拋銏犲礋
+// @Summary 閸掔娀娅庣拋銏犲礋
+// @Description 閸掔娀娅庣拋銏犲礋閿涘牅绮庣粻锛勬倞閸涙ê褰查崚鐘绘珟瀹告彃褰囧☉鍫㈡畱鐠併垹宕熼敍?
+// @Tags 鐠併垹宕熺粻锛勬倞
 // @Accept json
 // @Produce json
-// @Param id path int true "订单ID"
+// @Param id path int true "鐠併垹宕烮D"
 // @Success 200 {object} utils.Response
 // @Router /api/orders/{id} [delete]
 func (ctrl *OrderController) DeleteOrder(c *gin.Context) {
-	// 获取订单ID
+	// 閼惧嘲褰囩拋銏犲礋ID
 	orderIDParam := c.Param("id")
 	var orderID uint
 	if _, err := fmt.Sscanf(orderIDParam, "%d", &orderID); err != nil {
-		utils.BadRequest(c, "无效的订单ID")
+		utils.BadRequest(c, "閺冪姵鏅ラ惃鍕吂閸楁椌D")
 		return
 	}
 
-	// 获取当前用户信息
+	// 閼惧嘲褰囪ぐ鎾冲閻劍鍩涙穱鈩冧紖
 	userID, exists := c.Get("user_id")
 	if !exists {
-		utils.Unauthorized(c, "未登录")
+        utils.Unauthorized(c, "未登录")
 		return
 	}
 
 	userRole, exists := c.Get("role")
 	if !exists {
-		utils.Unauthorized(c, "未登录")
+        utils.Unauthorized(c, "未登录")
 		return
 	}
 
-	// 调用服务层
+	// 鐠嬪啰鏁ら張宥呭鐏?
 	if err := ctrl.orderService.DeleteOrder(orderID, userID.(uint), userRole.(int)); err != nil {
 		utils.Error(c, 500, err.Error())
 		return
 	}
 
 	utils.Success(c, gin.H{
-		"message": "订单删除成功",
+        "message": "订单删除成功",
 	})
 }
 
-// GetOrderStatistics 获取订单统计信息
-// @Summary 获取订单统计
-// @Description 获取订单统计信息，支持按状态、运输方式、国家等维度统计
-// @Tags 订单管理
+// GetOrderStatistics 閼惧嘲褰囩拋銏犲礋缂佺喕顓告穱鈩冧紖
+// @Summary 閼惧嘲褰囩拋銏犲礋缂佺喕顓?// @Description 閼惧嘲褰囩拋銏犲礋缂佺喕顓告穱鈩冧紖閿涘本鏁幐浣瑰瘻閻樿埖鈧降鈧浇绻嶆潏鎾存煙瀵繈鈧礁娴楃€瑰墎鐡戠紒鏉戝缂佺喕顓?// @Tags 鐠併垹宕熺粻锛勬倞
 // @Accept json
 // @Produce json
-// @Param start_time query int64 false "开始时间（Unix时间戳）"
-// @Param end_time query int64 false "结束时间（Unix时间戳）"
-// @Param group_by query string false "分组方式：date（按日期）"
+// @Param start_time query int64 false "瀵偓婵妞傞梻杈剧礄Unix閺冨爼妫块幋绛圭礆"
+// @Param end_time query int64 false "缂佹挻娼弮鍫曟？閿涘湶nix閺冨爼妫块幋绛圭礆"
+// @Param group_by query string false "鍒嗙粍鏂瑰紡锛坉ate锛氭寜鏃ユ湡锛?
 // @Success 200 {object} dto.OrderStatisticsResponse
 // @Router /api/orders/statistics [get]
 func (ctrl *OrderController) SplitOrder(c *gin.Context) {
 	orderIDParam := c.Param("id")
 	var orderID uint
 	if _, err := fmt.Sscanf(orderIDParam, "%d", &orderID); err != nil {
-		utils.BadRequest(c, "鏃犳晥鐨勮鍗旾D")
+		utils.BadRequest(c, "闁哄啰濮甸弲銉╂儍閸曨噮鍚傞柛妤佹D")
 		return
 	}
 
 	userRole, exists := c.Get("role")
 	if !exists {
-		utils.Unauthorized(c, "鏈櫥褰?")
+		utils.Unauthorized(c, "闁哄牜浜炲▍銉ㄣ亹?")
 		return
 	}
 	if role := userRole.(int); role != 5 && role != 6 && role != 7 {
-		utils.Forbidden(c, "当前角色无权拆单")
+		utils.Forbidden(c, "瑜版挸澧犵憴鎺曞閺冪姵娼堥幏鍡楀礋")
 		return
 	}
 
 	var req dto.SplitOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequest(c, "鍙傛暟閿欒: "+err.Error())
+		utils.BadRequest(c, "闁告瑥鍊归弳鐔兼煥濞嗘帩鍤? "+err.Error())
 		return
 	}
 
@@ -413,17 +397,17 @@ func (ctrl *OrderController) SplitOrder(c *gin.Context) {
 func (ctrl *OrderController) MergeOrders(c *gin.Context) {
 	userRole, exists := c.Get("role")
 	if !exists {
-		utils.Unauthorized(c, "鏈櫥褰?")
+		utils.Unauthorized(c, "闁哄牜浜炲▍銉ㄣ亹?")
 		return
 	}
 	if role := userRole.(int); role != 5 && role != 6 && role != 7 {
-		utils.Forbidden(c, "当前角色无权合单")
+		utils.Forbidden(c, "瑜版挸澧犵憴鎺曞閺冪姵娼堥崥鍫濆礋")
 		return
 	}
 
 	var req dto.MergeOrdersRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequest(c, "鍙傛暟閿欒: "+err.Error())
+		utils.BadRequest(c, "闁告瑥鍊归弳鐔兼煥濞嗘帩鍤? "+err.Error())
 		return
 	}
 
@@ -436,17 +420,177 @@ func (ctrl *OrderController) MergeOrders(c *gin.Context) {
 	utils.Success(c, result)
 }
 
-func (ctrl *OrderController) GetOrderStatistics(c *gin.Context) {
-	// 获取当前用户信息
+func (ctrl *OrderController) GetOrderCustoms(c *gin.Context) {
+	orderIDParam := c.Param("id")
+	var orderID uint
+	if _, err := fmt.Sscanf(orderIDParam, "%d", &orderID); err != nil {
+		utils.BadRequest(c, "闁哄啰濮甸弲銉╂儍閸曨噮鍚傞柛妤佹D")
+		return
+	}
+
 	userID, exists := c.Get("user_id")
 	if !exists {
-		utils.Unauthorized(c, "未登录")
+		utils.Unauthorized(c, "闁哄牜浜炲▍銉ㄣ亹?")
+		return
+	}
+	userRole, exists := c.Get("role")
+	if !exists {
+		utils.Unauthorized(c, "闁哄牜浜炲▍銉ㄣ亹?")
+		return
+	}
+
+	order, err := ctrl.orderService.GetOrderByID(orderID)
+	if err != nil {
+		utils.Error(c, 404, err.Error())
+		return
+	}
+	if userRole.(int) != 6 && userRole.(int) != 7 && order.CustomerID != userID.(uint) {
+		utils.Forbidden(c, "闁哄啰濮靛鍫ュ蓟閵壯勭畽婵縿鍊涢褰掑础?")
+		return
+	}
+
+	detail, err := ctrl.orderService.GetOrderDetailResponse(orderID)
+	if err != nil {
+		utils.Error(c, 500, err.Error())
+		return
+	}
+
+	utils.Success(c, gin.H{
+		"customs":       detail.Customs,
+		"customs_nodes": detail.CustomsNodes,
+	})
+}
+
+func (ctrl *OrderController) SuggestHSCode(c *gin.Context) {
+	var req dto.HSCodeSuggestRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, "闁告瑥鍊归弳鐔兼煥濞嗘帩鍤? "+err.Error())
+		return
+	}
+
+	result := services.NewHSCodeService().Suggest(&req)
+	utils.Success(c, result)
+}
+
+func (ctrl *OrderController) UpdateOrderCustoms(c *gin.Context) {
+	orderIDParam := c.Param("id")
+	var orderID uint
+	if _, err := fmt.Sscanf(orderIDParam, "%d", &orderID); err != nil {
+		utils.BadRequest(c, "闁哄啰濮甸弲銉╂儍閸曨噮鍚傞柛妤佹D")
 		return
 	}
 
 	userRole, exists := c.Get("role")
 	if !exists {
-		utils.Unauthorized(c, "未登录")
+		utils.Unauthorized(c, "闁哄牜浜炲▍銉ㄣ亹?")
+		return
+	}
+	if role := userRole.(int); role != 5 && role != 6 && role != 7 {
+		utils.Forbidden(c, "瑜版挸澧犵憴鎺曞閺冪姵娼堢紒瀛樺Б濞撳懎鍙ф穱鈩冧紖")
+		return
+	}
+
+	var req dto.UpdateOrderCustomsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, "闁告瑥鍊归弳鐔兼煥濞嗘帩鍤? "+err.Error())
+		return
+	}
+
+	if err := ctrl.orderService.UpdateOrderCustoms(orderID, &req); err != nil {
+		utils.Error(c, 500, err.Error())
+		return
+	}
+
+    utils.Success(c, gin.H{"message": "清关信息已更新"})
+}
+
+func (ctrl *OrderController) AddOrderCustomsNode(c *gin.Context) {
+	orderIDParam := c.Param("id")
+	var orderID uint
+	if _, err := fmt.Sscanf(orderIDParam, "%d", &orderID); err != nil {
+		utils.BadRequest(c, "闁哄啰濮甸弲銉╂儍閸曨噮鍚傞柛妤佹D")
+		return
+	}
+
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.Unauthorized(c, "闁哄牜浜炲▍銉ㄣ亹?")
+		return
+	}
+	userRole, exists := c.Get("role")
+	if !exists {
+		utils.Unauthorized(c, "闁哄牜浜炲▍銉ㄣ亹?")
+		return
+	}
+	if role := userRole.(int); role != 5 && role != 6 && role != 7 {
+		utils.Forbidden(c, "瑜版挸澧犵憴鎺曞閺冪姵娼堢紒瀛樺Б濞撳懎鍙ч懞鍌滃仯")
+		return
+	}
+
+	var req dto.CreateOrderCustomsNodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, "闁告瑥鍊归弳鐔兼煥濞嗘帩鍤? "+err.Error())
+		return
+	}
+
+	result, err := ctrl.orderService.AddOrderCustomsNode(orderID, userID.(uint), userRole.(int), &req)
+	if err != nil {
+		utils.Error(c, 500, err.Error())
+		return
+	}
+
+	utils.Success(c, result)
+}
+
+func (ctrl *OrderController) CreateOrderCustomsException(c *gin.Context) {
+	orderIDParam := c.Param("id")
+	var orderID uint
+	if _, err := fmt.Sscanf(orderIDParam, "%d", &orderID); err != nil {
+		utils.BadRequest(c, "闁哄啰濮甸弲銉╂儍閸曨噮鍚傞柛妤佹D")
+		return
+	}
+
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.Unauthorized(c, "闁哄牜浜炲▍銉ㄣ亹?")
+		return
+	}
+	userRole, exists := c.Get("role")
+	if !exists {
+		utils.Unauthorized(c, "闁哄牜浜炲▍銉ㄣ亹?")
+		return
+	}
+	if role := userRole.(int); role != 5 && role != 6 && role != 7 {
+		utils.Forbidden(c, "瑜版挸澧犵憴鎺曞閺冪姵娼堟稉濠冨Г閸忓啿濮熷鍌氱埗")
+		return
+	}
+
+	var req dto.CreateOrderCustomsExceptionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, "闁告瑥鍊归弳鐔兼煥濞嗘帩鍤? "+err.Error())
+		return
+	}
+
+	result, err := ctrl.orderService.CreateOrderCustomsException(orderID, userID.(uint), userRole.(int), &req)
+	if err != nil {
+		utils.Error(c, 500, err.Error())
+		return
+	}
+
+	utils.Success(c, result)
+}
+
+func (ctrl *OrderController) GetOrderStatistics(c *gin.Context) {
+	// 閼惧嘲褰囪ぐ鎾冲閻劍鍩涙穱鈩冧紖
+	userID, exists := c.Get("user_id")
+	if !exists {
+        utils.Unauthorized(c, "未登录")
+		return
+	}
+
+	userRole, exists := c.Get("role")
+	if !exists {
+        utils.Unauthorized(c, "未登录")
 		return
 	}
 
@@ -457,56 +601,53 @@ func (ctrl *OrderController) GetOrderStatistics(c *gin.Context) {
 		return
 	}
 
-	// 调用服务层
 	result, err := ctrl.orderService.GetOrderStatistics(userID.(uint), userRole.(int), &req)
 	if err != nil {
 		utils.Error(c, 500, err.Error())
 		return
 	}
-
 	utils.Success(c, result)
 }
-
-// GetAllowedStatusTransitions 获取订单允许的状态转换
-// @Summary 获取允许的状态转换
-// @Description 获取当前订单状态允许转换到的状态列表
-// @Tags 订单管理
+// GetAllowedStatusTransitions 閼惧嘲褰囩拋銏犲礋閸忎浇顔忛惃鍕Ц閹浇娴嗛幑?
+// @Summary 閼惧嘲褰囬崗浣筋啅閻ㄥ嫮濮搁幀浣芥祮閹?
+// @Description 閼惧嘲褰囪ぐ鎾冲鐠併垹宕熼悩鑸碘偓浣稿帒鐠佹瓕娴嗛幑銏犲煂閻ㄥ嫮濮搁幀浣稿灙鐞?
+// @Tags 鐠併垹宕熺粻锛勬倞
 // @Accept json
 // @Produce json
-// @Param id path int true "订单ID"
+// @Param id path int true "鐠併垹宕烮D"
 // @Success 200 {object} dto.AllowedTransitionsResponse
 // @Router /api/orders/{id}/transitions [get]
 func (ctrl *OrderController) GetAllowedStatusTransitions(c *gin.Context) {
-	// 获取订单ID
+	// 閼惧嘲褰囩拋銏犲礋ID
 	orderIDParam := c.Param("id")
 	var orderID uint
 	if _, err := fmt.Sscanf(orderIDParam, "%d", &orderID); err != nil {
-		utils.BadRequest(c, "无效的订单ID")
+		utils.BadRequest(c, "閺冪姵鏅ラ惃鍕吂閸楁椌D")
 		return
 	}
 
-	// 获取当前用户角色
+	// 閼惧嘲褰囪ぐ鎾冲閻劍鍩涚憴鎺曞
 	userRole, exists := c.Get("role")
 	if !exists {
-		utils.Unauthorized(c, "未登录")
+        utils.Unauthorized(c, "未登录")
 		return
 	}
 
-	// 获取订单信息
+	// 查询订单
 	order, err := ctrl.orderService.GetOrderByID(orderID)
 	if err != nil {
 		utils.Error(c, 404, err.Error())
 		return
 	}
 
-	// 获取允许的状态转换
 	allowed, err := ctrl.orderService.GetAllowedStatusTransitions(orderID, userRole.(int))
 	if err != nil {
 		utils.Error(c, 500, err.Error())
 		return
 	}
 
-	// 构建响应
+
+	// 閺嬪嫬缂撻崫宥呯安
 	response := dto.AllowedTransitionsResponse{
 		CurrentStatus:     int(order.Status),
 		CurrentStatusName: services.GetOrderStatusName(int(order.Status)),
@@ -523,58 +664,57 @@ func (ctrl *OrderController) GetAllowedStatusTransitions(c *gin.Context) {
 	utils.Success(c, response)
 }
 
-// GetOrderStatusLogs 获取订单状态变更日志
-// @Summary 获取订单状态变更日志
-// @Description 获取订单的所有状态变更历史记录
-// @Tags 订单管理
+// GetOrderStatusLogs 閼惧嘲褰囩拋銏犲礋閻樿埖鈧礁褰夐弴瀛樻）韫?
+// @Summary 閼惧嘲褰囩拋銏犲礋閻樿埖鈧礁褰夐弴瀛樻）韫?
+// @Description 閼惧嘲褰囩拋銏犲礋閻ㄥ嫭澧嶉張澶屽Ц閹礁褰夐弴鏉戝坊閸欒尪顔囪ぐ?
+// @Tags 鐠併垹宕熺粻锛勬倞
 // @Accept json
 // @Produce json
-// @Param id path int true "订单ID"
+// @Param id path int true "鐠併垹宕烮D"
 // @Success 200 {object} []dto.OrderStatusLogResponse
 // @Router /api/orders/{id}/status-logs [get]
 func (ctrl *OrderController) GetOrderStatusLogs(c *gin.Context) {
-	// 获取订单ID
+	// 閼惧嘲褰囩拋銏犲礋ID
 	orderIDParam := c.Param("id")
 	var orderID uint
 	if _, err := fmt.Sscanf(orderIDParam, "%d", &orderID); err != nil {
-		utils.BadRequest(c, "无效的订单ID")
+		utils.BadRequest(c, "閺冪姵鏅ラ惃鍕吂閸楁椌D")
 		return
 	}
 
-	// 获取当前用户信息
+	// 閼惧嘲褰囪ぐ鎾冲閻劍鍩涙穱鈩冧紖
 	userID, exists := c.Get("user_id")
 	if !exists {
-		utils.Unauthorized(c, "未登录")
+        utils.Unauthorized(c, "未登录")
 		return
 	}
 
 	userRole, exists := c.Get("role")
 	if !exists {
-		utils.Unauthorized(c, "未登录")
+        utils.Unauthorized(c, "未登录")
 		return
 	}
 
-	// 验证订单访问权限
+	// 妤犲矁鐦夌拋銏犲礋鐠佸潡妫堕弶鍐
 	order, err := ctrl.orderService.GetOrderByID(orderID)
 	if err != nil {
 		utils.Error(c, 404, err.Error())
 		return
 	}
 
-	// 权限检查：普通用户只能查看自己的订单日志
+	// 权限检查：客户只能查看自己的订单状态日志
 	if userRole.(int) == 1 && order.CustomerID != userID.(uint) {
 		utils.Forbidden(c, "无权查看此订单的状态日志")
 		return
 	}
-
-	// 获取状态变更日志
+	// 閼惧嘲褰囬悩鑸碘偓浣稿綁閺囧瓨妫╄箛?
 	logs, err := ctrl.orderService.GetOrderStatusLogs(orderID)
 	if err != nil {
-		utils.Error(c, 500, "获取状态变更日志失败")
+        utils.Error(c, 500, "获取状态变更日志失败")
 		return
 	}
 
-	// 构建响应
+	// 閺嬪嫬缂撻崫宥呯安
 	response := make([]dto.OrderStatusLogResponse, 0, len(logs))
 	for _, log := range logs {
 		response = append(response, dto.OrderStatusLogResponse{
@@ -597,19 +737,19 @@ func (ctrl *OrderController) GetOrderStatusLogs(c *gin.Context) {
 	utils.Success(c, response)
 }
 
-// getRoleName 获取角色名称
+// getRoleName 閼惧嘲褰囩憴鎺曞閸氬秶袨
 func getRoleName(role int) string {
 	roleNames := map[int]string{
-		1: "客户",
-		2: "快递员",
-		3: "分拣员",
-		4: "司机",
-		5: "站点管理员",
-		6: "调度员",
-		7: "管理员",
+        1: "客户",
+        2: "快递员",
+        3: "分拣员",
+        4: "司机",
+        5: "站点管理员",
+        6: "调度员",
+        7: "管理员",
 	}
 	if name, ok := roleNames[role]; ok {
 		return name
 	}
-	return "未知角色"
+	return "閺堫亞鐓＄憴鎺曞"
 }

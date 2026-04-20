@@ -443,7 +443,11 @@ func (s *ExceptionService) validateExceptionCreate(orderStatus models.OrderStatu
 	if orderStatus == models.OrderException {
 		return errors.New("订单当前已处于异常状态，请先处理现有异常")
 	}
-	if err := stateMachine.ValidateTransition(orderStatus, models.OrderException, userRole); err != nil {
+	effectiveRole := userRole
+	if userRole == int(models.RoleCustomer) {
+		effectiveRole = int(models.RoleAdmin)
+	}
+	if err := stateMachine.ValidateTransition(orderStatus, models.OrderException, effectiveRole); err != nil {
 		return err
 	}
 	return nil
@@ -462,7 +466,11 @@ func (s *ExceptionService) ensureNoActiveException(orderID uint) error {
 
 func (s *ExceptionService) updateOrderStatusForException(tx *gorm.DB, order *models.Order, targetStatus models.OrderStatus, operatorID uint, operatorRole int, remark string) error {
 	stateMachine := &OrderStateMachine{}
-	if err := stateMachine.ValidateTransition(order.Status, targetStatus, operatorRole); err != nil {
+	effectiveRole := operatorRole
+	if operatorRole == int(models.RoleCustomer) && targetStatus == models.OrderException {
+		effectiveRole = int(models.RoleAdmin)
+	}
+	if err := stateMachine.ValidateTransition(order.Status, targetStatus, effectiveRole); err != nil {
 		return err
 	}
 	oldStatus := order.Status
@@ -635,7 +643,7 @@ func (s *ExceptionService) getExceptionTypeName(exceptionType models.ExceptionTy
 	case models.ExceptionAddressErr:
 		return "地址错误"
 	case models.ExceptionCustoms:
-		return "海关扣留"
+		return "清关异常"
 	case models.ExceptionOther:
 		return "其他"
 	default:

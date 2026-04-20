@@ -65,15 +65,18 @@ func AutoMigrate() error {
 	return DB.AutoMigrate(
 		// 用户管理
 		&models.User{},
+		&models.UserAddress{},
 
 		// 订单管理
 		&models.Order{},
 		&models.OrderPackage{},
+		&models.OrderCustomsNode{},
 		&models.SignRecord{},
 		&models.OrderStatusLog{},
 
 		// 站点管理
 		&models.Station{},
+		&models.StationServiceArea{},
 		&models.StationFlow{},
 		&models.Warehouse{},
 		&models.Inventory{},
@@ -91,6 +94,8 @@ func AutoMigrate() error {
 		&models.BatchSchedule{},
 		&models.TransportPlan{},
 		&models.TransportPlanOrder{},
+		&models.PickupTask{},
+		&models.DeliveryTask{},
 		&models.DeliveryRecord{},
 
 		// 追踪管理

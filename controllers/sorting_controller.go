@@ -214,6 +214,7 @@ func (ctrl *SortingController) GetSortingRuleStats(c *gin.Context) {
 
 	utils.Success(c, response)
 }
+
 // CreateSortingTask 创建分拣任务
 func (ctrl *SortingController) CreateSortingTask(c *gin.Context) {
 	var req dto.CreateSortingTaskRequest
@@ -311,6 +312,7 @@ func (ctrl *SortingController) UpdateSortingTaskStatus(c *gin.Context) {
 
 	utils.SuccessWithMessage(c, "更新分拣任务状态成功", nil)
 }
+
 // SortingScan 分拣扫描
 func (ctrl *SortingController) SortingScan(c *gin.Context) {
 	var req dto.SortingScanRequest
@@ -328,7 +330,7 @@ func (ctrl *SortingController) SortingScan(c *gin.Context) {
 
 	sorterID := userID.(uint)
 
-	response, err := ctrl.sortingService.SortingScan(&req, sorterID)
+	response, err := ctrl.sortingService.SortingScanByCode(&req, sorterID)
 	if err != nil {
 		utils.Error(c, 500, err.Error())
 		return

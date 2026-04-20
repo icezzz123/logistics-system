@@ -13,7 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func TestCustomerCannotCreateOrder(t *testing.T) {
+func TestCustomerCreateOrderRequiresValidPayload(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	utils.InitJWT("test-secret")
 
@@ -34,8 +34,8 @@ func TestCustomerCannotCreateOrder(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403 for customer create order request, got %d, body=%s", w.Code, w.Body.String())
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for invalid customer create order request, got %d, body=%s", w.Code, w.Body.String())
 	}
 
 	var resp struct {
@@ -45,7 +45,7 @@ func TestCustomerCannotCreateOrder(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("unmarshal response failed: %v", err)
 	}
-	if resp.Code != http.StatusForbidden {
-		t.Fatalf("expected response code 403, got %d", resp.Code)
+	if resp.Code != http.StatusBadRequest {
+		t.Fatalf("expected response code 400, got %d", resp.Code)
 	}
 }

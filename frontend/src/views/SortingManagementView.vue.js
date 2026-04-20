@@ -32,7 +32,7 @@ const recordPagination = reactive({ total: 0, page: 1, pageSize: 10 });
 const ruleFilters = reactive({ rule_name: '', country: '', city: '', station_id: undefined, status: -1 });
 const taskFilters = reactive({ task_no: '', station_id: undefined, assigned_to: undefined, status: undefined });
 const recordFilters = reactive({ task_id: undefined, order_id: undefined, station_id: undefined, sorter_id: undefined, is_correct: -1 });
-const scanForm = reactive({ order_no: '', station_id: undefined, task_id: undefined, remark: '' });
+const scanForm = reactive({ scan_code: '', station_id: undefined, task_code: '', remark: '' });
 const ruleDialogVisible = ref(false);
 const ruleDialogMode = ref('create');
 const currentRuleId = ref(null);
@@ -210,12 +210,12 @@ async function submitTaskStatus() { if (!currentTaskForStatus.value || !taskStat
 finally {
     taskStatusSubmitting.value = false;
 } }
-function prefillScan(task) { activeTab.value = 'tasks'; scanForm.task_id = task.id; scanForm.station_id = task.station_id; scanForm.order_no = ''; scanForm.remark = ''; }
-async function submitScan() { if (!scanForm.order_no.trim() || !scanForm.station_id) {
-    ElMessage.warning('请填写订单号和站点');
+function prefillScan(task) { activeTab.value = 'tasks'; scanForm.task_code = task.task_no; scanForm.station_id = task.station_id; scanForm.scan_code = ''; scanForm.remark = ''; }
+async function submitScan() { if (!scanForm.scan_code.trim() || !scanForm.station_id) {
+    ElMessage.warning('请填写扫描码和站点');
     return;
 } scanSubmitting.value = true; try {
-    scanResult.value = await http.post('/sorting/scan', { order_no: scanForm.order_no.trim(), station_id: Number(scanForm.station_id), task_id: scanForm.task_id ? Number(scanForm.task_id) : 0, remark: scanForm.remark.trim() });
+    scanResult.value = await http.post('/sorting/scan', { scan_code: scanForm.scan_code.trim(), station_id: Number(scanForm.station_id), task_code: scanForm.task_code.trim(), remark: scanForm.remark.trim() });
     ElMessage.success(scanResult.value.message);
     await Promise.all([loadTasks(), loadRecords(), loadSortingStats()]);
 }
@@ -1588,22 +1588,22 @@ const __VLS_366 = {}.ElFormItem;
 /** @type {[typeof __VLS_components.ElFormItem, typeof __VLS_components.elFormItem, typeof __VLS_components.ElFormItem, typeof __VLS_components.elFormItem, ]} */ ;
 // @ts-ignore
 const __VLS_367 = __VLS_asFunctionalComponent(__VLS_366, new __VLS_366({
-    label: "订单号",
+    label: "扫描码",
 }));
 const __VLS_368 = __VLS_367({
-    label: "订单号",
+    label: "扫描码",
 }, ...__VLS_functionalComponentArgsRest(__VLS_367));
 __VLS_369.slots.default;
 const __VLS_370 = {}.ElInput;
 /** @type {[typeof __VLS_components.ElInput, typeof __VLS_components.elInput, ]} */ ;
 // @ts-ignore
 const __VLS_371 = __VLS_asFunctionalComponent(__VLS_370, new __VLS_370({
-    modelValue: (__VLS_ctx.scanForm.order_no),
-    placeholder: "请输入订单号",
+    modelValue: (__VLS_ctx.scanForm.scan_code),
+    placeholder: "请输入订单号或包裹号",
 }));
 const __VLS_372 = __VLS_371({
-    modelValue: (__VLS_ctx.scanForm.order_no),
-    placeholder: "请输入订单号",
+    modelValue: (__VLS_ctx.scanForm.scan_code),
+    placeholder: "请输入订单号或包裹号",
 }, ...__VLS_functionalComponentArgsRest(__VLS_371));
 var __VLS_369;
 const __VLS_374 = {}.ElFormItem;
@@ -1651,23 +1651,23 @@ const __VLS_386 = {}.ElFormItem;
 /** @type {[typeof __VLS_components.ElFormItem, typeof __VLS_components.elFormItem, typeof __VLS_components.ElFormItem, typeof __VLS_components.elFormItem, ]} */ ;
 // @ts-ignore
 const __VLS_387 = __VLS_asFunctionalComponent(__VLS_386, new __VLS_386({
-    label: "关联任务",
+    label: "关联任务号",
 }));
 const __VLS_388 = __VLS_387({
-    label: "关联任务",
+    label: "关联任务号",
 }, ...__VLS_functionalComponentArgsRest(__VLS_387));
 __VLS_389.slots.default;
 const __VLS_390 = {}.ElSelect;
 /** @type {[typeof __VLS_components.ElSelect, typeof __VLS_components.elSelect, typeof __VLS_components.ElSelect, typeof __VLS_components.elSelect, ]} */ ;
 // @ts-ignore
 const __VLS_391 = __VLS_asFunctionalComponent(__VLS_390, new __VLS_390({
-    modelValue: (__VLS_ctx.scanForm.task_id),
+    modelValue: (__VLS_ctx.scanForm.task_code),
     clearable: true,
     placeholder: "可选",
     ...{ style: {} },
 }));
 const __VLS_392 = __VLS_391({
-    modelValue: (__VLS_ctx.scanForm.task_id),
+    modelValue: (__VLS_ctx.scanForm.task_code),
     clearable: true,
     placeholder: "可选",
     ...{ style: {} },
@@ -1678,11 +1678,11 @@ const __VLS_394 = {}.ElOption;
 // @ts-ignore
 const __VLS_395 = __VLS_asFunctionalComponent(__VLS_394, new __VLS_394({
     label: "不关联任务",
-    value: (undefined),
+    value: (''),
 }));
 const __VLS_396 = __VLS_395({
     label: "不关联任务",
-    value: (undefined),
+    value: (''),
 }, ...__VLS_functionalComponentArgsRest(__VLS_395));
 for (const [item] of __VLS_getVForSourceType((__VLS_ctx.taskOptionsForScan))) {
     const __VLS_398 = {}.ElOption;
@@ -1691,12 +1691,12 @@ for (const [item] of __VLS_getVForSourceType((__VLS_ctx.taskOptionsForScan))) {
     const __VLS_399 = __VLS_asFunctionalComponent(__VLS_398, new __VLS_398({
         key: (item.id),
         label: (item.task_no),
-        value: (item.id),
+        value: (item.task_no),
     }));
     const __VLS_400 = __VLS_399({
         key: (item.id),
         label: (item.task_no),
-        value: (item.id),
+        value: (item.task_no),
     }, ...__VLS_functionalComponentArgsRest(__VLS_399));
 }
 var __VLS_393;
@@ -1773,7 +1773,12 @@ if (__VLS_ctx.scanResult) {
     var __VLS_421;
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
     (__VLS_ctx.scanResult.message);
-    if (__VLS_ctx.scanResult.route_code) {
+    if (__VLS_ctx.scanResult.parcel_no || __VLS_ctx.scanResult.task_no) {
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.small, __VLS_intrinsicElements.small)({});
+        (__VLS_ctx.scanResult.parcel_no || '整单');
+        (__VLS_ctx.scanResult.task_no || '未关联任务');
+    }
+    else if (__VLS_ctx.scanResult.route_code) {
         __VLS_asFunctionalElement(__VLS_intrinsicElements.small, __VLS_intrinsicElements.small)({});
         (__VLS_ctx.scanResult.route_code);
         (__VLS_ctx.normalizeText(__VLS_ctx.scanResult.station_name));

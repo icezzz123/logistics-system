@@ -39,47 +39,56 @@ func (s *OrderService) CreateOrder(customerID uint, req *dto.CreateOrderRequest)
 	if normalized.IsInsured == 1 && normalized.InsuredAmount > 0 {
 		insuranceFee = s.calculateInsuranceFee(normalized.InsuredAmount)
 	}
-	totalAmount := freightCharge + insuranceFee
+	customsFee := calculateCustomsFee(normalized.CustomsDuty, normalized.CustomsVAT, normalized.CustomsOtherTax)
+	totalAmount := freightCharge + insuranceFee + customsFee
 	estimatedDays := s.estimateDeliveryDays(normalized.TransportMode, normalized.SenderCountry, normalized.ReceiverCountry)
 
 	order := &models.Order{
-		OrderNo:          orderNo,
-		CustomerID:       customerID,
-		HierarchyType:    models.OrderHierarchyNormal,
-		RelationType:     models.OrderRelationNormal,
-		SenderName:       normalized.SenderName,
-		SenderPhone:      normalized.SenderPhone,
-		SenderCountry:    normalized.SenderCountry,
-		SenderProvince:   normalized.SenderProvince,
-		SenderCity:       normalized.SenderCity,
-		SenderAddress:    normalized.SenderAddress,
-		SenderPostcode:   normalized.SenderPostcode,
-		ReceiverName:     normalized.ReceiverName,
-		ReceiverPhone:    normalized.ReceiverPhone,
-		ReceiverCountry:  normalized.ReceiverCountry,
-		ReceiverProvince: normalized.ReceiverProvince,
-		ReceiverCity:     normalized.ReceiverCity,
-		ReceiverAddress:  normalized.ReceiverAddress,
-		ReceiverPostcode: normalized.ReceiverPostcode,
-		GoodsName:        normalized.GoodsName,
-		GoodsCategory:    normalized.GoodsCategory,
-		GoodsWeight:      normalized.GoodsWeight,
-		GoodsVolume:      normalized.GoodsVolume,
-		GoodsQuantity:    normalized.GoodsQuantity,
-		GoodsValue:       normalized.GoodsValue,
-		IsInsured:        normalized.IsInsured,
-		InsuredAmount:    normalized.InsuredAmount,
-		TransportMode:    models.TransportMode(normalized.TransportMode),
-		ServiceType:      normalized.ServiceType,
-		EstimatedDays:    estimatedDays,
-		FreightCharge:    freightCharge,
-		InsuranceFee:     insuranceFee,
-		TotalAmount:      totalAmount,
-		Currency:         "CNY",
-		PaymentStatus:    "unpaid",
-		Status:           models.OrderPending,
-		OrderTime:        time.Now().Unix(),
-		Remark:           normalized.Remark,
+		OrderNo:            orderNo,
+		CustomerID:         customerID,
+		HierarchyType:      models.OrderHierarchyNormal,
+		RelationType:       models.OrderRelationNormal,
+		SenderName:         normalized.SenderName,
+		SenderPhone:        normalized.SenderPhone,
+		SenderCountry:      normalized.SenderCountry,
+		SenderProvince:     normalized.SenderProvince,
+		SenderCity:         normalized.SenderCity,
+		SenderAddress:      normalized.SenderAddress,
+		SenderPostcode:     normalized.SenderPostcode,
+		ReceiverName:       normalized.ReceiverName,
+		ReceiverPhone:      normalized.ReceiverPhone,
+		ReceiverCountry:    normalized.ReceiverCountry,
+		ReceiverProvince:   normalized.ReceiverProvince,
+		ReceiverCity:       normalized.ReceiverCity,
+		ReceiverAddress:    normalized.ReceiverAddress,
+		ReceiverPostcode:   normalized.ReceiverPostcode,
+		GoodsName:          normalized.GoodsName,
+		GoodsCategory:      normalized.GoodsCategory,
+		GoodsWeight:        normalized.GoodsWeight,
+		GoodsVolume:        normalized.GoodsVolume,
+		GoodsQuantity:      normalized.GoodsQuantity,
+		GoodsValue:         normalized.GoodsValue,
+		IsInsured:          normalized.IsInsured,
+		InsuredAmount:      normalized.InsuredAmount,
+		CustomsDeclaration: normalized.CustomsDeclaration,
+		HSCode:             normalized.HSCode,
+		DeclaredValue:      normalized.DeclaredValue,
+		CustomsDuty:        normalized.CustomsDuty,
+		CustomsVAT:         normalized.CustomsVAT,
+		CustomsOtherTax:    normalized.CustomsOtherTax,
+		CustomsStatus:      "pending",
+		TransportMode:      models.TransportMode(normalized.TransportMode),
+		ServiceType:        normalized.ServiceType,
+		EstimatedDays:      estimatedDays,
+		FreightCharge:      freightCharge,
+		CustomsFee:         customsFee,
+		InsuranceFee:       insuranceFee,
+		TotalAmount:        totalAmount,
+		Currency:           "CNY",
+		PaymentStatus:      "unpaid",
+		Status:             models.OrderPending,
+		OrderTime:          time.Now().Unix(),
+		Remark:             normalized.Remark,
 	}
 
 	if order.GoodsQuantity == 0 {
@@ -90,8 +99,10 @@ func (s *OrderService) CreateOrder(customerID uint, req *dto.CreateOrderRequest)
 		if err := s.createOrderRecord(tx, order); err != nil {
 			return err
 		}
-		_, err := s.createPackagesForOrder(tx, order, s.buildPackageRequests(&normalized), order.ID, models.OrderPackageTypeNormal)
-		return err
+		if _, err := s.createPackagesForOrder(tx, order, s.buildPackageRequests(&normalized), order.ID, models.OrderPackageTypeNormal); err != nil {
+			return err
+		}
+		return s.autoAcceptAndCreatePickupTaskTx(tx, order, &normalized)
 	}); err != nil {
 		return nil, errors.New("创建订单失败")
 	}
@@ -118,10 +129,10 @@ func (s *OrderService) validateOrderCustomer(customerID uint) error {
 
 func (s *OrderService) generateOrderNo(customerID uint) string {
 	now := time.Now()
-	return fmt.Sprintf("ORD%s%04d%03d",
+	return fmt.Sprintf("ORD%s%04d%06d",
 		now.Format("20060102150405"),
 		customerID%10000,
-		now.Nanosecond()/1000000)
+		now.Nanosecond()/1000)
 }
 
 func (s *OrderService) validateOrderParams(req *dto.CreateOrderRequest) error {
@@ -179,6 +190,14 @@ func (s *OrderService) validateOrderParams(req *dto.CreateOrderRequest) error {
 		}
 		if req.GoodsValue > 0 && req.InsuredAmount > req.GoodsValue {
 			return errors.New("保价金额不能超过货物价值")
+		}
+	}
+	if req.CustomsDeclaration != "" && len(strings.TrimSpace(req.CustomsDeclaration)) < 2 {
+		return errors.New("申报品名至少需要2个字符")
+	}
+	if req.HSCode != "" {
+		if _, err := validateHSCodeFormat(req.HSCode); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -418,6 +437,9 @@ func GetOrderStatusName(status int) string {
 		10: "已签收",
 		11: "异常",
 		12: "已取消",
+		13: "待揽收",
+		14: "揽收中",
+		15: "已揽收",
 	}
 	if name, ok := statusNames[status]; ok {
 		return name
@@ -506,7 +528,7 @@ func (s *OrderService) CancelOrder(orderID uint, userID uint, userRole int) erro
 	if err := s.ensureLeafOrderOperation(order); err != nil {
 		return err
 	}
-	if order.Status != models.OrderPending && order.Status != models.OrderAccepted {
+	if order.Status != models.OrderPending && order.Status != models.OrderAccepted && order.Status != models.OrderPickupPending {
 		return errors.New("当前状态的订单不能取消")
 	}
 
@@ -735,6 +757,8 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, newStatus int, userID uin
 	switch models.OrderStatus(newStatus) {
 	case models.OrderAccepted:
 		// 接单时间可以记录
+	case models.OrderPickedUp:
+		updates["pickup_time"] = currentTime
 	case models.OrderInWarehouse:
 		// 入库时间
 	case models.OrderDelivered:

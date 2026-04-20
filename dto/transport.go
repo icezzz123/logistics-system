@@ -130,7 +130,8 @@ type TransportTaskStatusRequest struct {
 
 // TransportScanRequest 装车/卸车扫描请求
 type TransportScanRequest struct {
-	ScanCode  string `json:"scan_code" binding:"required,max=50"` // 扫描码，可传任务编号或订单号
+	ScanCode  string `json:"scan_code" binding:"required,max=50"` // 扫描码，可传任务号、订单号或包裹号
+	TaskNo    string `json:"task_no" binding:"max=50"`            // 任务号，可选
 	StationID uint   `json:"station_id" binding:"required"`       // 扫描站点ID
 	Remark    string `json:"remark" binding:"max=500"`            // 备注
 }
@@ -141,6 +142,8 @@ type TransportScanResponse struct {
 	TaskNo          string `json:"task_no"`           // 任务编号
 	OrderID         uint   `json:"order_id"`          // 订单ID
 	OrderNo         string `json:"order_no"`          // 订单号
+	ParcelNo        string `json:"parcel_no"`         // 包裹号
+	ScanCodeType    string `json:"scan_code_type"`    // 扫描码类型
 	ScanType        string `json:"scan_type"`         // 扫描类型：load/unload
 	StationID       uint   `json:"station_id"`        // 站点ID
 	StationName     string `json:"station_name"`      // 站点名称

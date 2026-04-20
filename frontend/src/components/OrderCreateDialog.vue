@@ -2,33 +2,26 @@
   <el-dialog :model-value="modelValue" title="录入新订单" width="960px" class="create-order-dialog" @update:model-value="updateVisible">
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="create-order-form">
       <section class="create-order-section">
-        <div class="create-order-section__head">
-          <p class="eyebrow">Customer</p>
-          <h3>下单客户</h3>
-        </div>
-        <div class="create-order-grid">
-          <el-form-item label="客户账号" prop="customer_id" class="create-order-grid__wide">
+        <div class="create-order-section__head create-order-section__head--inline">
+          <div>
+            <p class="eyebrow">Sender</p>
+            <h3>发件信息</h3>
+          </div>
+          <div class="create-order-section__actions">
             <el-select
-              v-model="form.customer_id"
-              filterable
-              remote
-              reserve-keyword
+              v-model="selectedSenderAddressId"
               clearable
-              placeholder="请输入客户姓名、用户名、手机号搜索"
-              :remote-method="loadCustomerOptions"
-              :loading="customerLoading"
-              style="width: 100%"
+              filterable
+              placeholder="选择常用发件地址"
+              :disabled="!canUseAddressBook"
+              :loading="addressLoading"
+              class="create-order-section__select"
+              @change="applySelectedAddress('sender', $event)"
             >
-              <el-option v-for="item in customerOptions" :key="item.id" :label="formatCustomerLabel(item)" :value="item.id" />
+              <el-option v-for="item in senderAddressOptions" :key="item.id" :label="formatAddressBookLabel(item)" :value="item.id" />
             </el-select>
-          </el-form-item>
-        </div>
-      </section>
-
-      <section class="create-order-section">
-        <div class="create-order-section__head">
-          <p class="eyebrow">Sender</p>
-          <h3>发件信息</h3>
+            <el-button plain :disabled="!canUseAddressBook" :loading="quickSaveLoading.sender" @click="saveCurrentAddress('sender')">保存到地址簿</el-button>
+          </div>
         </div>
         <div class="create-order-grid">
           <el-form-item label="发件人" prop="sender_name">
@@ -56,9 +49,26 @@
       </section>
 
       <section class="create-order-section">
-        <div class="create-order-section__head">
-          <p class="eyebrow">Receiver</p>
-          <h3>收件信息</h3>
+        <div class="create-order-section__head create-order-section__head--inline">
+          <div>
+            <p class="eyebrow">Receiver</p>
+            <h3>收件信息</h3>
+          </div>
+          <div class="create-order-section__actions">
+            <el-select
+              v-model="selectedReceiverAddressId"
+              clearable
+              filterable
+              placeholder="选择常用收件地址"
+              :disabled="!canUseAddressBook"
+              :loading="addressLoading"
+              class="create-order-section__select"
+              @change="applySelectedAddress('receiver', $event)"
+            >
+              <el-option v-for="item in receiverAddressOptions" :key="item.id" :label="formatAddressBookLabel(item)" :value="item.id" />
+            </el-select>
+            <el-button plain :disabled="!canUseAddressBook" :loading="quickSaveLoading.receiver" @click="saveCurrentAddress('receiver')">保存到地址簿</el-button>
+          </div>
         </div>
         <div class="create-order-grid">
           <el-form-item label="收件人" prop="receiver_name">
@@ -114,6 +124,40 @@
           </el-form-item>
           <el-form-item label="保价金额" prop="insured_amount">
             <el-input-number v-model="form.insured_amount" :min="0" :step="100" :precision="2" :disabled="form.is_insured !== 1" style="width: 100%" />
+          </el-form-item>
+        </div>
+      </section>
+
+      <section class="create-order-section">
+        <div class="create-order-section__head create-order-section__head--inline">
+          <div>
+            <p class="eyebrow">Customs</p>
+            <h3>清关申报</h3>
+          </div>
+          <el-button plain :loading="hsSuggesting" @click="suggestHSCode">自动匹配 HS Code</el-button>
+        </div>
+        <p v-if="hsSuggestion?.suggestion" class="create-order-tip">
+          推荐：{{ hsSuggestion.suggestion.hs_code }} / {{ hsSuggestion.suggestion.customs_declaration }}
+          <template v-if="hsSuggestion.suggestion.reason"> · {{ hsSuggestion.suggestion.reason }}</template>
+        </p>
+        <div class="create-order-grid">
+          <el-form-item label="申报品名">
+            <el-input v-model="form.customs_declaration" placeholder="如：服装 / 电子配件" />
+          </el-form-item>
+          <el-form-item label="HS Code">
+            <el-input v-model="form.hs_code" placeholder="请输入 HS Code" />
+          </el-form-item>
+          <el-form-item label="申报价值">
+            <el-input-number v-model="form.declared_value" :min="0" :step="10" :precision="2" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="关税">
+            <el-input-number v-model="form.customs_duty" :min="0" :step="10" :precision="2" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="增值税">
+            <el-input-number v-model="form.customs_vat" :min="0" :step="10" :precision="2" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="其他税费">
+            <el-input-number v-model="form.customs_other_tax" :min="0" :step="10" :precision="2" style="width: 100%" />
           </el-form-item>
         </div>
       </section>
@@ -194,11 +238,13 @@
     </template>
   </el-dialog>
 </template>
+
 <script setup lang="ts">
-import { nextTick, reactive, ref, watch } from 'vue'
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 
 import http from '@/utils/http'
+import { useAuthStore } from '@/stores/auth'
 
 type CreateOrderResponse = {
   order_id: number
@@ -209,6 +255,21 @@ type CreateOrderResponse = {
   estimated_days: number
   order_time: number
   package_count: number
+}
+
+type HSCodeSuggestionItem = {
+  hs_code: string
+  customs_declaration: string
+  category: string
+  confidence: string
+  reason: string
+}
+
+type HSCodeSuggestResponse = {
+  matched: boolean
+  suggestion?: HSCodeSuggestionItem
+  alternatives: HSCodeSuggestionItem[]
+  note: string
 }
 
 type PackageFormItem = {
@@ -222,17 +283,25 @@ type PackageFormItem = {
   remark: string
 }
 
-type CustomerOption = {
+type AddressBookItem = {
   id: number
-  username: string
-  real_name?: string
-  phone?: string
-  email?: string
-  display_name: string
+  user_id: number
+  label: string
+  address_type: 'sender' | 'receiver'
+  address_type_name: string
+  contact_name: string
+  contact_phone: string
+  country: string
+  province: string
+  city: string
+  address: string
+  postcode: string
+  remark: string
+  is_default: number
 }
 
-type CustomerOptionListResponse = {
-  list: CustomerOption[]
+type AddressBookListResponse = {
+  list: AddressBookItem[]
   total: number
 }
 
@@ -250,16 +319,25 @@ const serviceTypeOptions = [
   { value: 'economy', label: '经济服务' },
 ]
 
-const props = defineProps<{ modelValue: boolean }>()
+const props = defineProps<{
+  modelValue: boolean
+}>()
+
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
   (e: 'created', payload: CreateOrderResponse): void
 }>()
 
+const authStore = useAuthStore()
 const formRef = ref<FormInstance>()
 const submitting = ref(false)
-const customerLoading = ref(false)
-const customerOptions = ref<CustomerOption[]>([])
+const addressLoading = ref(false)
+const hsSuggesting = ref(false)
+const addressBookList = ref<AddressBookItem[]>([])
+const hsSuggestion = ref<HSCodeSuggestResponse | null>(null)
+const selectedSenderAddressId = ref<number | undefined>()
+const selectedReceiverAddressId = ref<number | undefined>()
+const quickSaveLoading = reactive({ sender: false, receiver: false })
 
 const createEmptyPackage = (): PackageFormItem => ({
   parcel_no: '',
@@ -273,7 +351,6 @@ const createEmptyPackage = (): PackageFormItem => ({
 })
 
 const createDefaultForm = () => ({
-  customer_id: undefined as number | undefined,
   sender_name: '',
   sender_phone: '',
   sender_country: '中国',
@@ -296,6 +373,12 @@ const createDefaultForm = () => ({
   goods_value: 0,
   is_insured: 0,
   insured_amount: 0,
+  customs_declaration: '',
+  hs_code: '',
+  declared_value: 0,
+  customs_duty: 0,
+  customs_vat: 0,
+  customs_other_tax: 0,
   packages: [] as PackageFormItem[],
   transport_mode: 3,
   service_type: 'standard',
@@ -305,7 +388,6 @@ const createDefaultForm = () => ({
 const form = reactive(createDefaultForm())
 
 const rules: FormRules<typeof form> = {
-  customer_id: [{ required: true, message: '请选择下单客户', trigger: 'change' }],
   sender_name: [{ required: true, message: '请输入发件人', trigger: 'blur' }],
   sender_phone: [{ required: true, message: '请输入发件人手机号', trigger: 'blur' }],
   sender_country: [{ required: true, message: '请输入发件国家', trigger: 'blur' }],
@@ -322,17 +404,19 @@ const rules: FormRules<typeof form> = {
   insured_amount: [{ validator: validateInsuredAmount, trigger: 'change' }],
 }
 
+const canUseAddressBook = computed(() => Boolean(authStore.user?.id))
+const senderAddressOptions = computed(() => addressBookList.value.filter((item) => item.address_type === 'sender'))
+const receiverAddressOptions = computed(() => addressBookList.value.filter((item) => item.address_type === 'receiver'))
+
 watch(
   () => props.modelValue,
   async (visible) => {
-    if (!visible) {
-      return
-    }
+    if (!visible) return
     Object.assign(form, createDefaultForm())
-    await loadCustomerOptions('')
-    nextTick(() => {
-      formRef.value?.clearValidate()
-    })
+    hsSuggestion.value = null
+    clearAddressSelections()
+    await loadAddressBook()
+    nextTick(() => formRef.value?.clearValidate())
   },
 )
 
@@ -360,46 +444,213 @@ function removePackage(index: number) {
   form.packages.splice(index, 1)
 }
 
-function formatCustomerLabel(item: CustomerOption) {
-  const parts = [item.display_name]
-  if (item.username && item.username !== item.display_name) {
-    parts.push(`(${item.username})`)
-  }
-  if (item.phone) {
-    parts.push(item.phone)
-  }
-  return parts.join(' ')
+function clearAddressSelections() {
+  selectedSenderAddressId.value = undefined
+  selectedReceiverAddressId.value = undefined
 }
 
-async function loadCustomerOptions(keyword: string) {
-  customerLoading.value = true
+function formatAddressBookLabel(item: AddressBookItem) {
+  return `${item.label} · ${item.contact_name} · ${item.city}`
+}
+
+async function loadAddressBook() {
+  if (!authStore.user?.id) {
+    addressBookList.value = []
+    clearAddressSelections()
+    return
+  }
+
+  addressLoading.value = true
   try {
-    const data = await http.get<never, CustomerOptionListResponse>('/customers/options', {
-      params: {
-        keyword: keyword.trim(),
-        page_size: 20,
-      },
-    })
-    customerOptions.value = data.list || []
+    const data = await http.get<never, AddressBookListResponse>('/address-book')
+    addressBookList.value = data.list || []
+    applyDefaultAddressesIfNeeded()
   } finally {
-    customerLoading.value = false
+    addressLoading.value = false
+  }
+}
+
+function applyDefaultAddressesIfNeeded() {
+  if (!form.sender_name && !form.sender_phone && !form.sender_address) {
+    const senderDefault = senderAddressOptions.value.find((item) => item.is_default === 1)
+    if (senderDefault) {
+      selectedSenderAddressId.value = senderDefault.id
+      applyAddressToForm('sender', senderDefault)
+    }
+  }
+
+  if (!form.receiver_name && !form.receiver_phone && !form.receiver_address) {
+    const receiverDefault = receiverAddressOptions.value.find((item) => item.is_default === 1)
+    if (receiverDefault) {
+      selectedReceiverAddressId.value = receiverDefault.id
+      applyAddressToForm('receiver', receiverDefault)
+    }
+  }
+}
+
+function applySelectedAddress(type: 'sender' | 'receiver', value: number | undefined) {
+  if (!value) return
+  const target = addressBookList.value.find((item) => item.id === value && item.address_type === type)
+  if (!target) return
+  applyAddressToForm(type, target)
+}
+
+function applyAddressToForm(type: 'sender' | 'receiver', item: AddressBookItem) {
+  if (type === 'sender') {
+    form.sender_name = item.contact_name
+    form.sender_phone = item.contact_phone
+    form.sender_country = item.country
+    form.sender_province = item.province
+    form.sender_city = item.city
+    form.sender_address = item.address
+    form.sender_postcode = item.postcode
+    return
+  }
+
+  form.receiver_name = item.contact_name
+  form.receiver_phone = item.contact_phone
+  form.receiver_country = item.country
+  form.receiver_province = item.province
+  form.receiver_city = item.city
+  form.receiver_address = item.address
+  form.receiver_postcode = item.postcode
+}
+
+function buildQuickSavePayload(type: 'sender' | 'receiver') {
+  const payload = {
+    address_type: type,
+    label: '',
+    contact_name: '',
+    contact_phone: '',
+    country: '',
+    province: '',
+    city: '',
+    address: '',
+    postcode: '',
+    remark: '',
+    is_default: 0,
+  }
+
+  if (type === 'sender') {
+    payload.contact_name = form.sender_name.trim()
+    payload.contact_phone = form.sender_phone.trim()
+    payload.country = form.sender_country.trim()
+    payload.province = form.sender_province.trim()
+    payload.city = form.sender_city.trim()
+    payload.address = form.sender_address.trim()
+    payload.postcode = form.sender_postcode.trim()
+    payload.label = `${payload.contact_name || '发件人'}-${payload.city || '常用地址'}`
+    payload.is_default = senderAddressOptions.value.length === 0 ? 1 : 0
+    return payload
+  }
+
+  payload.contact_name = form.receiver_name.trim()
+  payload.contact_phone = form.receiver_phone.trim()
+  payload.country = form.receiver_country.trim()
+  payload.province = form.receiver_province.trim()
+  payload.city = form.receiver_city.trim()
+  payload.address = form.receiver_address.trim()
+  payload.postcode = form.receiver_postcode.trim()
+  payload.label = `${payload.contact_name || '收件人'}-${payload.city || '常用地址'}`
+  payload.is_default = receiverAddressOptions.value.length === 0 ? 1 : 0
+  return payload
+}
+
+function validateQuickSavePayload(payload: ReturnType<typeof buildQuickSavePayload>) {
+  if (!payload.contact_name) throw new Error('请先填写联系人姓名')
+  if (!payload.contact_phone) throw new Error('请先填写联系电话')
+  if (!payload.country) throw new Error('请先填写国家')
+  if (!payload.city) throw new Error('请先填写城市')
+  if (!payload.address) throw new Error('请先填写详细地址')
+}
+
+async function saveCurrentAddress(type: 'sender' | 'receiver') {
+  if (!canUseAddressBook.value) {
+    ElMessage.warning('当前账号不可用，请重新登录后重试')
+    return
+  }
+
+  const payload = buildQuickSavePayload(type)
+  try {
+    validateQuickSavePayload(payload)
+  } catch (error) {
+    ElMessage.warning(error instanceof Error ? error.message : '地址信息不完整')
+    return
+  }
+
+  const prompt = await ElMessageBox.prompt('请输入地址标签，方便下次快速选择。', '保存到地址簿', {
+    confirmButtonText: '保存',
+    cancelButtonText: '取消',
+    inputValue: payload.label,
+    inputPattern: /^.{1,50}$/,
+    inputErrorMessage: '地址标签长度需在 1-50 个字符之间',
+  }).catch(() => null)
+
+  if (!prompt || !prompt.value) return
+
+  payload.label = prompt.value.trim()
+  quickSaveLoading[type] = true
+  try {
+    const data = await http.post<never, AddressBookItem>('/address-book', payload)
+    ElMessage.success('地址已保存到地址簿')
+    await loadAddressBook()
+    if (type === 'sender') {
+      selectedSenderAddressId.value = data.id
+    } else {
+      selectedReceiverAddressId.value = data.id
+    }
+  } finally {
+    quickSaveLoading[type] = false
+  }
+}
+
+async function suggestHSCode() {
+  hsSuggesting.value = true
+  try {
+    const data = await http.post<never, HSCodeSuggestResponse>('/orders/hs-suggest', {
+      goods_name: form.goods_name.trim(),
+      goods_category: form.goods_category.trim(),
+      customs_declaration: form.customs_declaration.trim(),
+      packages: form.packages
+        .map((item) => ({
+          parcel_no: item.parcel_no.trim(),
+          goods_name: item.goods_name.trim(),
+          goods_category: item.goods_category.trim(),
+          weight: Number(item.weight),
+          volume: Number(item.volume),
+          quantity: Number(item.quantity),
+          goods_value: Number(item.goods_value),
+          remark: item.remark.trim(),
+        }))
+        .filter((item) => item.goods_name),
+    })
+    hsSuggestion.value = data
+    if (data.suggestion) {
+      form.hs_code = data.suggestion.hs_code
+      if (!form.customs_declaration.trim()) {
+        form.customs_declaration = data.suggestion.customs_declaration
+      }
+      ElMessage.success(`已匹配 HS Code：${data.suggestion.hs_code}`)
+    } else {
+      ElMessage.warning(data.note || '未匹配到常见 HS Code')
+    }
+  } finally {
+    hsSuggesting.value = false
   }
 }
 
 async function submit() {
-  if (!formRef.value) {
-    return
-  }
-
+  if (!formRef.value) return
   const valid = await formRef.value.validate().catch(() => false)
-  if (!valid) {
+  if (!valid) return
+  if (!authStore.user?.id) {
+    ElMessage.warning('当前账号不可用，请重新登录后重试')
     return
   }
 
   submitting.value = true
   try {
     const payload = {
-      customer_id: Number(form.customer_id),
       sender_name: form.sender_name.trim(),
       sender_phone: form.sender_phone.trim(),
       sender_country: form.sender_country.trim(),
@@ -422,16 +673,24 @@ async function submit() {
       goods_value: Number(form.goods_value),
       is_insured: form.is_insured,
       insured_amount: form.is_insured === 1 ? Number(form.insured_amount) : 0,
-      packages: form.packages.map((item) => ({
-        parcel_no: item.parcel_no.trim(),
-        goods_name: item.goods_name.trim(),
-        goods_category: item.goods_category.trim(),
-        weight: Number(item.weight),
-        volume: Number(item.volume),
-        quantity: Number(item.quantity),
-        goods_value: Number(item.goods_value),
-        remark: item.remark.trim(),
-      })).filter((item) => item.goods_name),
+      customs_declaration: form.customs_declaration.trim(),
+      hs_code: form.hs_code.trim(),
+      declared_value: Number(form.declared_value),
+      customs_duty: Number(form.customs_duty),
+      customs_vat: Number(form.customs_vat),
+      customs_other_tax: Number(form.customs_other_tax),
+      packages: form.packages
+        .map((item) => ({
+          parcel_no: item.parcel_no.trim(),
+          goods_name: item.goods_name.trim(),
+          goods_category: item.goods_category.trim(),
+          weight: Number(item.weight),
+          volume: Number(item.volume),
+          quantity: Number(item.quantity),
+          goods_value: Number(item.goods_value),
+          remark: item.remark.trim(),
+        }))
+        .filter((item) => item.goods_name),
       transport_mode: Number(form.transport_mode),
       service_type: form.service_type,
       remark: form.remark.trim(),
@@ -446,6 +705,7 @@ async function submit() {
   }
 }
 </script>
+
 <style scoped>
 .create-order-form {
   display: flex;
@@ -474,6 +734,18 @@ async function submit() {
 .create-order-section__head h3 {
   margin: 0;
   font-size: 1.02rem;
+}
+
+.create-order-section__actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.create-order-section__select {
+  width: 280px;
 }
 
 .create-order-tip {
@@ -518,6 +790,16 @@ async function submit() {
 }
 
 @media (max-width: 900px) {
+  .create-order-section__head--inline,
+  .create-order-section__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .create-order-section__select {
+    width: 100%;
+  }
+
   .create-order-grid {
     grid-template-columns: 1fr;
   }

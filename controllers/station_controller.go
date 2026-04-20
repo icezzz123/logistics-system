@@ -408,7 +408,7 @@ func (ctrl *StationController) GetInventoryWarnings(c *gin.Context) {
 // GetInventoryWarningsByLevel 按预警级别获取站点列表
 func (ctrl *StationController) GetInventoryWarningsByLevel(c *gin.Context) {
 	level := c.Param("level")
-	
+
 	// 验证预警级别参数
 	if level != "warning" && level != "critical" && level != "all" {
 		utils.BadRequest(c, "无效的预警级别，支持: warning, critical, all")
@@ -427,6 +427,7 @@ func (ctrl *StationController) GetInventoryWarningsByLevel(c *gin.Context) {
 		"warnings": warnings,
 	})
 }
+
 // GetInventoryStats 获取库存统计报表
 func (ctrl *StationController) GetInventoryStats(c *gin.Context) {
 	var req dto.InventoryStatsRequest

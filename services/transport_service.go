@@ -960,6 +960,24 @@ func (s *TransportService) updateOrderStatusForScan(tx *gorm.DB, order *models.O
 }
 
 func (s *TransportService) createOrderStatusLogTx(tx *gorm.DB, orderID uint, fromStatus, toStatus models.OrderStatus, operatorID uint, operatorRole int, remark string) error {
+	if operatorID == 0 {
+		log := models.OrderStatusLog{
+			OrderID:      orderID,
+			FromStatus:   fromStatus,
+			ToStatus:     toStatus,
+			OperatorID:   0,
+			OperatorName: "System",
+			OperatorRole: operatorRole,
+			Remark:       remark,
+			ChangeTime:   time.Now().Unix(),
+		}
+
+		if err := tx.Create(&log).Error; err != nil {
+			return errors.New("create order status log failed")
+		}
+		return nil
+	}
+
 	var user models.User
 	if err := tx.Select("username", "real_name").Where("id = ?", operatorID).First(&user).Error; err != nil {
 		return errors.New("查询操作人信息失败")

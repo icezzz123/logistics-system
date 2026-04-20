@@ -21,6 +21,7 @@ func (Vehicle) TableName() string {
 type TransportTask struct {
 	ID         uint    `gorm:"primarykey;autoIncrement" json:"id"`
 	TaskNo     string  `gorm:"uniqueIndex;size:50;not null" json:"task_no"`
+	BatchID    uint    `gorm:"index;default:0" json:"batch_id"`
 	OrderID    uint    `gorm:"not null;index" json:"order_id"`
 	VehicleID  uint    `gorm:"not null;index" json:"vehicle_id"`
 	DriverID   uint    `gorm:"not null;index" json:"driver_id"`
@@ -85,10 +86,10 @@ func (TransportPlan) TableName() string { return "transport_plans" }
 
 // TransportPlanOrder 运输计划-订单关联
 type TransportPlanOrder struct {
-	ID       uint  `gorm:"primarykey;autoIncrement" json:"id"`
-	PlanID   uint  `gorm:"not null;index" json:"plan_id"`
-	OrderID  uint  `gorm:"not null;index" json:"order_id"`
-	CTime    int64 `gorm:"autoCreateTime;not null" json:"ctime"`
+	ID      uint  `gorm:"primarykey;autoIncrement" json:"id"`
+	PlanID  uint  `gorm:"not null;index" json:"plan_id"`
+	OrderID uint  `gorm:"not null;index" json:"order_id"`
+	CTime   int64 `gorm:"autoCreateTime;not null" json:"ctime"`
 }
 
 func (TransportPlanOrder) TableName() string { return "transport_plan_orders" }

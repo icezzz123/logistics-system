@@ -186,6 +186,7 @@
             <el-table-column label="操作" fixed="right" width="180">
               <template #default="scope">
                 <div class="dispatch-actions">
+                  <el-button link type="primary" @click="printBatchList(scope.row)">打印清单</el-button>
                   <el-button v-if="nextBatchStatuses(scope.row.status).length" link type="warning" @click="openBatchStatusDialog(scope.row)">更新状态</el-button>
                 </div>
               </template>
@@ -337,6 +338,7 @@ import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { useRoute } from 'vue-router'
 
 import http from '@/utils/http'
+import { printHtmlDocument, renderPrintFieldGrid, renderPrintHead, renderPrintTable, joinPrintLines } from '@/utils/print'
 import { readQueryEnum } from '@/utils/workbench'
 
 type VehicleOption = { id: number; plate_number: string }
@@ -346,6 +348,8 @@ type UserListResponse = { list: UserOption[]; total: number; page: number; page_
 type OrderOption = { id: number; order_no: string }
 type OrderListResponse = { list: OrderOption[]; total: number; page: number; page_size: number; pages: number }
 type BatchItem = { id: number; batch_no: string; batch_name: string; vehicle_id: number; plate_number: string; driver_id: number; driver_name: string; order_count: number; total_weight: number; status: string; status_name: string; planned_time: number; actual_time: number; remark: string }
+type BatchTaskItem = { id: number; task_no: string; order_id: number; order_no: string; vehicle_id: number; plate_number: string; driver_id: number; driver_name: string; start_point: string; end_point: string; distance: number; status: string; status_name: string; start_time: number; end_time: number; cost: number; remark: string; create_time: string; update_time: string }
+type BatchDetail = BatchItem & { tasks: BatchTaskItem[] }
 type BatchListResponse = { list: BatchItem[]; total: number; page: number; page_size: number; pages: number }
 type PlanItem = { id: number; plan_no: string; plan_name: string; plan_date: number; vehicle_id: number; plate_number: string; driver_id: number; driver_name: string; start_point: string; end_point: string; waypoints: string; distance: number; estimated_hours: number; max_capacity: number; used_capacity: number; status: string; status_name: string; remark: string }
 type PlanListResponse = { list: PlanItem[]; total: number; page: number; page_size: number; pages: number }
@@ -494,6 +498,44 @@ async function submitBatchDialog() {
 }
 function openBatchStatusDialog(batch: BatchItem) { currentBatch.value = batch; batchStatusForm.status = nextBatchStatuses(batch.status)[0]?.value; batchStatusForm.remark = ''; batchStatusDialogVisible.value = true }
 async function submitBatchStatus() { if (!currentBatch.value || !batchStatusForm.status) return; batchStatusSubmitting.value = true; try { await http.put(`/dispatch/batches/${currentBatch.value.id}/status`, { status: batchStatusForm.status, remark: batchStatusForm.remark.trim() }); ElMessage.success('批次状态已更新'); batchStatusDialogVisible.value = false; await loadBatches() } finally { batchStatusSubmitting.value = false } }
+
+async function printBatchList(batch: BatchItem) {
+  const detail = await http.get<never, BatchDetail>(`/dispatch/batches/${batch.id}`)
+  const taskRows = (detail.tasks || []).map((item, index) => [
+    String(index + 1),
+    item.order_no || '-',
+    item.task_no || '-',
+    item.start_point || '-',
+    item.end_point || '-',
+    item.status_name || item.status || '-',
+  ])
+  const html = `
+    ${renderPrintHead('批次清单', detail.batch_no, detail.status_name)}
+    ${renderPrintFieldGrid([
+      {
+        title: '批次信息',
+        fields: [
+          { label: '批次名称', value: detail.batch_name },
+          { label: '计划时间', value: formatUnix(detail.planned_time) },
+          { label: '实际时间', value: formatUnix(detail.actual_time) },
+          { label: '备注', value: normalizeText(detail.remark, '无') },
+        ],
+      },
+      {
+        title: '车辆与司机',
+        fields: [
+          { label: '车辆', value: normalizeText(detail.plate_number, '未分配') },
+          { label: '司机', value: normalizeText(detail.driver_name, '未分配') },
+          { label: '订单数', value: String(detail.order_count || 0) },
+          { label: '总重量', value: `${Number(detail.total_weight || 0).toFixed(2)} kg` },
+        ],
+      },
+    ])}
+    ${renderPrintTable('任务明细', ['序号', '订单号', '任务号', '起点', '终点', '状态'], taskRows.length ? taskRows : [['-', '-', '-', '-', '-', '暂无任务']])}
+    <section class="print-note">批次清单打印时间：${formatUnix(Date.now())}</section>
+  `
+  printHtmlDocument(`批次清单-${detail.batch_no}`, html)
+}
 
 function resetPlanForm() { planForm.plan_name = ''; planForm.plan_date = undefined; planForm.vehicle_id = undefined; planForm.driver_id = undefined; planForm.start_point = ''; planForm.end_point = ''; planForm.waypoints = '[]'; planForm.distance = 0; planForm.estimated_hours = 0; planForm.max_capacity = 0; planForm.remark = '' }
 function openPlanDialog(plan?: PlanItem) { if (plan) { planDialogMode.value = 'edit'; currentPlanId.value = plan.id; planForm.plan_name = plan.plan_name; planForm.plan_date = String(plan.plan_date * 1000); planForm.vehicle_id = plan.vehicle_id; planForm.driver_id = plan.driver_id; planForm.start_point = plan.start_point; planForm.end_point = plan.end_point; planForm.waypoints = plan.waypoints || '[]'; planForm.distance = plan.distance; planForm.estimated_hours = plan.estimated_hours; planForm.max_capacity = plan.max_capacity; planForm.remark = plan.remark } else { planDialogMode.value = 'create'; currentPlanId.value = null; resetPlanForm() } planDialogVisible.value = true; planFormRef.value?.clearValidate() }

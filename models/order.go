@@ -15,6 +15,9 @@ const (
 	OrderSigned             OrderStatus = 10
 	OrderException          OrderStatus = 11
 	OrderCancelled          OrderStatus = 12
+	OrderPickupPending      OrderStatus = 13
+	OrderPickingUp          OrderStatus = 14
+	OrderPickedUp           OrderStatus = 15
 )
 
 type TransportMode int
@@ -66,14 +69,21 @@ type Order struct {
 	ReceiverAddress  string `gorm:"size:255;not null" json:"receiver_address"`
 	ReceiverPostcode string `gorm:"size:20" json:"receiver_postcode"`
 
-	GoodsName     string  `gorm:"size:100;not null" json:"goods_name"`
-	GoodsCategory string  `gorm:"size:50" json:"goods_category"`
-	GoodsWeight   float64 `gorm:"type:decimal(10,2);not null" json:"goods_weight"`
-	GoodsVolume   float64 `gorm:"type:decimal(10,2)" json:"goods_volume"`
-	GoodsQuantity int     `gorm:"default:1" json:"goods_quantity"`
-	GoodsValue    float64 `gorm:"type:decimal(10,2)" json:"goods_value"`
-	IsInsured     int     `gorm:"default:0" json:"is_insured"`
-	InsuredAmount float64 `gorm:"type:decimal(10,2);default:0" json:"insured_amount"`
+	GoodsName          string  `gorm:"size:100;not null" json:"goods_name"`
+	GoodsCategory      string  `gorm:"size:50" json:"goods_category"`
+	GoodsWeight        float64 `gorm:"type:decimal(10,2);not null" json:"goods_weight"`
+	GoodsVolume        float64 `gorm:"type:decimal(10,2)" json:"goods_volume"`
+	GoodsQuantity      int     `gorm:"default:1" json:"goods_quantity"`
+	GoodsValue         float64 `gorm:"type:decimal(10,2)" json:"goods_value"`
+	IsInsured          int     `gorm:"default:0" json:"is_insured"`
+	InsuredAmount      float64 `gorm:"type:decimal(10,2);default:0" json:"insured_amount"`
+	CustomsDeclaration string  `gorm:"size:100" json:"customs_declaration"`
+	HSCode             string  `gorm:"size:30" json:"hs_code"`
+	DeclaredValue      float64 `gorm:"type:decimal(10,2);default:0" json:"declared_value"`
+	CustomsDuty        float64 `gorm:"type:decimal(10,2);default:0" json:"customs_duty"`
+	CustomsVAT         float64 `gorm:"type:decimal(10,2);default:0" json:"customs_vat"`
+	CustomsOtherTax    float64 `gorm:"type:decimal(10,2);default:0" json:"customs_other_tax"`
+	CustomsStatus      string  `gorm:"size:30;default:'pending'" json:"customs_status"`
 
 	TransportMode   TransportMode `gorm:"type:int" json:"transport_mode"`
 	ServiceType     string        `gorm:"size:20" json:"service_type"`

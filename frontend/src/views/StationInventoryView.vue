@@ -42,6 +42,8 @@
               <strong>站点资料与库存状态联表展示</strong>
             </div>
             <div class="station-panel__toolbar-actions">
+              <el-button v-if="canEditStation" type="primary" @click="openCreateStationDialog()">新建站点</el-button>
+              <el-button type="primary" plain @click="openInboundScanDialog()">入库扫描</el-button>
               <el-button @click="refreshOverview">刷新概览</el-button>
               <el-button type="primary" @click="openCreateCheckDialog()">新建盘点</el-button>
             </div>
@@ -136,6 +138,7 @@
               <template #default="scope">
                 <div class="station-actions">
                   <el-button link type="primary" @click="openStationDetail(scope.row.id)">详情</el-button>
+                  <el-button link type="primary" @click="openInboundScanDialog(scope.row.id)">入库</el-button>
                   <el-button v-if="canEditStation" link type="success" @click="openEditStation(scope.row)">编辑</el-button>
                   <el-button link type="warning" @click="openCreateCheckDialog(scope.row.id)">盘点</el-button>
                   <el-button link type="info" @click="focusStationWarning(scope.row.id)">预警</el-button>
@@ -387,6 +390,7 @@
           <div class="station-detail__toolbar">
             <div class="station-detail__toolbar-actions">
               <el-button v-if="canEditStation" type="success" plain @click="openEditStation(stationDetail)">编辑站点</el-button>
+              <el-button type="primary" plain @click="openInboundScanDialog(stationDetail.id)">入库扫描</el-button>
               <el-button type="primary" plain @click="openCreateCheckDialog(stationDetail.id)">对该站点发起盘点</el-button>
             </div>
           </div>
@@ -491,6 +495,42 @@
 
           <div class="station-detail-card station-detail-card--full">
             <div class="station-detail-card__head">
+              <h3>服务范围配置</h3>
+              <div class="station-detail__toolbar-actions">
+                <el-button v-if="canManageServiceArea" type="primary" plain @click="openCreateServiceAreaDialog()">新增范围</el-button>
+              </div>
+            </div>
+            <el-table :data="stationServiceAreas" size="small" stripe>
+              <el-table-column label="覆盖范围" min-width="260">
+                <template #default="scope">
+                  {{ formatAddress(scope.row.country, scope.row.province, scope.row.city, scope.row.district) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="层级" width="100">
+                <template #default="scope">
+                  <el-tag effect="plain">{{ serviceAreaScopeLabel(scope.row.scope_level) }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="priority" label="优先级" width="100" />
+              <el-table-column label="状态" width="100">
+                <template #default="scope">
+                  <el-tag :type="scope.row.status === 1 ? 'success' : 'info'" effect="dark">{{ scope.row.status_name }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="remark" label="备注" min-width="180" />
+              <el-table-column v-if="canManageServiceArea" label="操作" fixed="right" width="160">
+                <template #default="scope">
+                  <div class="station-actions">
+                    <el-button link type="primary" @click="openEditServiceAreaDialog(scope.row)">编辑</el-button>
+                    <el-button link type="danger" @click="deleteServiceArea(scope.row)">删除</el-button>
+                  </div>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
+          <div class="station-detail-card station-detail-card--full">
+            <div class="station-detail-card__head">
               <h3>站点流转记录</h3>
               <span>{{ stationFlows.length }} 条</span>
             </div>
@@ -533,6 +573,12 @@
             <div class="station-detail__hero-tags">
               <el-tag :type="checkDetail.status === 2 ? 'success' : 'warning'" effect="dark">{{ checkDetail.status_name }}</el-tag>
               <el-tag effect="plain">差异 {{ checkDetail.difference_count }}</el-tag>
+            </div>
+          </div>
+
+          <div class="station-detail__toolbar">
+            <div class="station-detail__toolbar-actions">
+              <el-button type="primary" plain @click="printInventoryCheck()">打印盘点单</el-button>
             </div>
           </div>
 
@@ -629,9 +675,89 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="editStationVisible" title="编辑站点" width="720px">
+    <el-dialog v-model="inboundScanVisible" title="站点入库扫描" width="460px">
+      <el-form label-position="top">
+        <el-form-item label="入库站点" required>
+          <el-select v-model="inboundScanForm.station_id" placeholder="请选择站点" style="width: 100%">
+            <el-option
+              v-for="item in stationOptions"
+              :key="item.id"
+              :label="normalizeText(item.name, item.station_code)"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="扫描码 / 订单号" required>
+          <el-input
+            v-model="inboundScanForm.scan_code"
+            placeholder="请输入订单号或包裹号"
+            @keyup.enter="submitInboundScan"
+          />
+        </el-form-item>
+        <el-form-item label="重量">
+          <el-input-number v-model="inboundScanForm.weight" :min="0" :precision="2" :step="0.1" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="体积">
+          <el-input-number v-model="inboundScanForm.volume" :min="0" :precision="2" :step="0.1" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input
+            v-model="inboundScanForm.remark"
+            type="textarea"
+            :rows="3"
+            maxlength="200"
+            show-word-limit
+            placeholder="可选，填写入库说明"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="inboundScanVisible = false">取消</el-button>
+        <el-button type="primary" :loading="inboundScanSubmitting" @click="submitInboundScan">确认入库</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="serviceAreaDialogVisible" :title="serviceAreaDialogMode === 'create' ? '新增服务范围' : '编辑服务范围'" width="620px">
+      <el-form label-position="top">
+        <div class="station-edit-grid">
+          <el-form-item label="国家" class="station-edit-grid__wide">
+            <el-input v-model="serviceAreaForm.country" placeholder="请输入国家，如：中国" />
+          </el-form-item>
+          <el-form-item label="省份">
+            <el-input v-model="serviceAreaForm.province" placeholder="可选，省级覆盖" />
+          </el-form-item>
+          <el-form-item label="城市">
+            <el-input v-model="serviceAreaForm.city" placeholder="可选，市级覆盖" />
+          </el-form-item>
+          <el-form-item label="区县">
+            <el-input v-model="serviceAreaForm.district" placeholder="可选，区县级覆盖" />
+          </el-form-item>
+          <el-form-item label="优先级">
+            <el-input-number v-model="serviceAreaForm.priority" :min="1" :max="10000" :step="10" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-radio-group v-model="serviceAreaForm.status">
+              <el-radio :value="1">启用</el-radio>
+              <el-radio :value="0">禁用</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="备注" class="station-edit-grid__wide">
+            <el-input v-model="serviceAreaForm.remark" type="textarea" :rows="3" maxlength="300" show-word-limit placeholder="可选，填写覆盖说明" />
+          </el-form-item>
+        </div>
+      </el-form>
+      <template #footer>
+        <el-button @click="serviceAreaDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="serviceAreaSubmitting" @click="submitServiceArea">{{ serviceAreaDialogMode === 'create' ? '创建范围' : '保存修改' }}</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="editStationVisible" :title="editStationMode === 'create' ? '新建站点' : '编辑站点'" width="720px">
       <el-form ref="editStationFormRef" :model="editStationForm" :rules="editStationRules" label-position="top">
         <div class="station-edit-grid">
+          <el-form-item v-if="editStationMode === 'create'" label="站点编码" prop="station_code">
+            <el-input v-model="editStationForm.station_code" placeholder="请输入站点编码，如 SHA-TR-01" />
+          </el-form-item>
           <el-form-item label="站点名称" prop="name">
             <el-input v-model="editStationForm.name" placeholder="请输入站点名称" />
           </el-form-item>
@@ -690,7 +816,7 @@
       </el-form>
       <template #footer>
         <el-button @click="editStationVisible = false">取消</el-button>
-        <el-button type="primary" :loading="editStationSubmitting" @click="submitEditStation">保存修改</el-button>
+        <el-button type="primary" :loading="editStationSubmitting" @click="submitEditStation">{{ editStationMode === 'create' ? '创建站点' : '保存修改' }}</el-button>
       </template>
     </el-dialog>
   </section>
@@ -698,10 +824,11 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { useRoute } from 'vue-router'
 
 import http from '@/utils/http'
+import { printHtmlDocument, renderPrintFieldGrid, renderPrintHead, renderPrintTable } from '@/utils/print'
 import { useAuthStore } from '@/stores/auth'
 import { readQueryEnum, readQueryNumber } from '@/utils/workbench'
 
@@ -923,6 +1050,40 @@ type CreateInventoryCheckResponse = {
   message: string
 }
 
+type InboundScanResponse = {
+  flow_id: number
+  order_id: number
+  order_no: string
+  parcel_no: string
+  station_id: number
+  station_name: string
+  goods_name: string
+  weight: number
+  volume: number
+  order_status: number
+  inbound_time: number
+}
+
+type StationServiceAreaItem = {
+  id: number
+  station_id: number
+  country: string
+  province: string
+  city: string
+  district: string
+  priority: number
+  scope_level: string
+  status: number
+  status_name: string
+  remark: string
+  ctime: number
+  mtime: number
+}
+
+type StationServiceAreaListResponse = {
+  list: StationServiceAreaItem[]
+}
+
 type StationRow = StationItem & {
   inventory: StationInventoryItem
 }
@@ -946,6 +1107,7 @@ const stationDetailLoading = ref(false)
 const checkLoading = ref(false)
 const checkDetailLoading = ref(false)
 const createCheckSubmitting = ref(false)
+const inboundScanSubmitting = ref(false)
 
 const stations = ref<StationItem[]>([])
 const stationOptions = ref<StationItem[]>([])
@@ -980,11 +1142,14 @@ const distribution = reactive<InventoryDistributionResponse>({
 const checks = ref<InventoryCheckItem[]>([])
 const stationDetail = ref<StationItem | null>(null)
 const stationFlows = ref<StationFlowItem[]>([])
+const stationServiceAreas = ref<StationServiceAreaItem[]>([])
 const checkDetail = ref<InventoryCheckDetail | null>(null)
 
 const stationDetailVisible = ref(false)
 const checkDetailVisible = ref(false)
 const createCheckVisible = ref(false)
+const inboundScanVisible = ref(false)
+const serviceAreaDialogVisible = ref(false)
 const editStationVisible = ref(false)
 
 const stationPagination = reactive({
@@ -1030,9 +1195,21 @@ const createCheckForm = reactive({
   check_type: 'full',
   remark: '',
 })
+const inboundScanForm = reactive({
+  station_id: undefined as number | undefined,
+  scan_code: '',
+  weight: 0,
+  volume: 0,
+  remark: '',
+})
+const editStationMode = ref<'create' | 'edit'>('edit')
 const editStationTargetId = ref<number | null>(null)
 const editStationSubmitting = ref(false)
+const serviceAreaDialogMode = ref<'create' | 'edit'>('create')
+const serviceAreaTargetId = ref<number | null>(null)
+const serviceAreaSubmitting = ref(false)
 const editStationForm = reactive({
+  station_code: '',
   name: '',
   type: 1,
   country: '',
@@ -1048,12 +1225,22 @@ const editStationForm = reactive({
   status: 1,
   remark: '',
 })
+const serviceAreaForm = reactive({
+  country: '',
+  province: '',
+  city: '',
+  district: '',
+  priority: 100,
+  status: 1,
+  remark: '',
+})
 
 const createCheckRules: FormRules<typeof createCheckForm> = {
   station_id: [{ required: true, message: '请选择盘点站点', trigger: 'change' }],
   check_type: [{ required: true, message: '请选择盘点类型', trigger: 'change' }],
 }
 const editStationRules: FormRules<typeof editStationForm> = {
+  station_code: [{ required: true, message: '请输入站点编码', trigger: 'blur' }],
   name: [{ required: true, message: '请输入站点名称', trigger: 'blur' }],
   type: [{ required: true, message: '请选择站点类型', trigger: 'change' }],
   country: [{ required: true, message: '请输入国家', trigger: 'blur' }],
@@ -1134,6 +1321,7 @@ const sortedCapacityDistribution = computed(() => {
 
 const topBusyStations = computed(() => stats.station_top.slice(0, 4))
 const canEditStation = computed(() => authStore.user?.role === 7)
+const canManageServiceArea = computed(() => [5, 6, 7].includes(authStore.user?.role || 0))
 
 function normalizeText(value: string | null | undefined, fallback = '-') {
   const text = String(value ?? '').trim()
@@ -1177,6 +1365,16 @@ function warningTagType(level: string): 'success' | 'warning' | 'danger' | 'info
     critical: 'danger',
   }
   return mapping[level] || 'info'
+}
+
+function serviceAreaScopeLabel(level: string) {
+  const mapping: Record<string, string> = {
+    country: '国家',
+    province: '省份',
+    city: '城市',
+    district: '区县',
+  }
+  return mapping[level] || '范围'
 }
 
 function applyWorkbenchFilters() {
@@ -1363,7 +1561,7 @@ async function openStationDetail(stationID: number) {
   stationDetailVisible.value = true
   stationDetailLoading.value = true
   try {
-    const [detail, flowData] = await Promise.all([
+    const [detail, flowData, serviceAreaData] = await Promise.all([
       http.get<never, StationItem>(`/stations/${stationID}`),
       http.get<never, StationFlowListResponse>('/stations/flows/records', {
         params: {
@@ -1372,9 +1570,13 @@ async function openStationDetail(stationID: number) {
           page_size: 8,
         },
       }),
+      canManageServiceArea.value
+        ? http.get<never, StationServiceAreaListResponse>(`/manager/stations/${stationID}/service-areas`)
+        : Promise.resolve({ list: [] }),
     ])
     stationDetail.value = detail
     stationFlows.value = flowData.list || []
+    stationServiceAreas.value = serviceAreaData.list || []
   } finally {
     stationDetailLoading.value = false
   }
@@ -1390,6 +1592,45 @@ async function openCheckDetail(checkID: number) {
   }
 }
 
+function printInventoryCheck() {
+  if (!checkDetail.value) return
+  const detail = checkDetail.value
+  const rows = (detail.details || []).map((item, index) => [
+    String(index + 1),
+    item.order_no,
+    item.status_name,
+    item.is_found_name,
+    normalizeText(item.remark, '-'),
+  ])
+
+  const html = `
+    ${renderPrintHead('库存盘点单', detail.check_no, detail.status_name)}
+    ${renderPrintFieldGrid([
+      {
+        title: '盘点信息',
+        fields: [
+          { label: '站点', value: normalizeText(detail.station_name, '-') },
+          { label: '盘点类型', value: detail.check_type_name },
+          { label: '盘点人', value: normalizeText(detail.operator_name, '系统') },
+          { label: '备注', value: normalizeText(detail.remark, '无') },
+        ],
+      },
+      {
+        title: '结果汇总',
+        fields: [
+          { label: '系统数量', value: String(detail.system_count ?? 0) },
+          { label: '实际数量', value: String(detail.actual_count ?? 0) },
+          { label: '差异数量', value: String(detail.difference_count ?? 0) },
+          { label: '盘点时间', value: formatUnix(detail.check_time) },
+        ],
+      },
+    ])}
+    ${renderPrintTable('盘点明细', ['序号', '订单号', '订单状态', '是否找到', '备注'], rows.length ? rows : [['-', '-', '-', '-', '暂无明细']])}
+    <section class="print-note">盘点单打印时间：${formatUnix(Date.now())}</section>
+  `
+  printHtmlDocument(`盘点单-${detail.check_no}`, html)
+}
+
 function openCreateCheckDialog(stationID?: number) {
   createCheckForm.station_id = stationID
   createCheckForm.check_type = 'full'
@@ -1397,8 +1638,72 @@ function openCreateCheckDialog(stationID?: number) {
   createCheckVisible.value = true
 }
 
+function openInboundScanDialog(stationID?: number) {
+  inboundScanForm.station_id = stationID
+  inboundScanForm.scan_code = ''
+  inboundScanForm.weight = 0
+  inboundScanForm.volume = 0
+  inboundScanForm.remark = ''
+  inboundScanVisible.value = true
+}
+
+function openCreateStationDialog() {
+  editStationMode.value = 'create'
+  editStationTargetId.value = null
+  editStationForm.station_code = ''
+  editStationForm.name = ''
+  editStationForm.type = 1
+  editStationForm.country = ''
+  editStationForm.province = ''
+  editStationForm.city = ''
+  editStationForm.address = ''
+  editStationForm.latitude = 0
+  editStationForm.longitude = 0
+  editStationForm.capacity = 1
+  editStationForm.contact_name = ''
+  editStationForm.contact_phone = ''
+  editStationForm.working_hours = ''
+  editStationForm.status = 1
+  editStationForm.remark = ''
+  editStationVisible.value = true
+  editStationFormRef.value?.clearValidate()
+}
+
+function resetServiceAreaForm() {
+  serviceAreaForm.country = stationDetail.value?.country || ''
+  serviceAreaForm.province = ''
+  serviceAreaForm.city = ''
+  serviceAreaForm.district = ''
+  serviceAreaForm.priority = 100
+  serviceAreaForm.status = 1
+  serviceAreaForm.remark = ''
+}
+
+function openCreateServiceAreaDialog() {
+  if (!stationDetail.value) return
+  serviceAreaDialogMode.value = 'create'
+  serviceAreaTargetId.value = null
+  resetServiceAreaForm()
+  serviceAreaDialogVisible.value = true
+}
+
+function openEditServiceAreaDialog(area: StationServiceAreaItem) {
+  serviceAreaDialogMode.value = 'edit'
+  serviceAreaTargetId.value = area.id
+  serviceAreaForm.country = area.country || ''
+  serviceAreaForm.province = area.province || ''
+  serviceAreaForm.city = area.city || ''
+  serviceAreaForm.district = area.district || ''
+  serviceAreaForm.priority = area.priority || 100
+  serviceAreaForm.status = area.status ?? 1
+  serviceAreaForm.remark = area.remark || ''
+  serviceAreaDialogVisible.value = true
+}
+
 function openEditStation(station: StationItem | StationRow) {
+  editStationMode.value = 'edit'
   editStationTargetId.value = station.id
+  editStationForm.station_code = station.station_code || ''
   editStationForm.name = station.name || ''
   editStationForm.type = station.type || 1
   editStationForm.country = station.country || ''
@@ -1443,8 +1748,38 @@ async function submitCreateCheck() {
   }
 }
 
+async function submitInboundScan() {
+  if (!inboundScanForm.station_id) {
+    ElMessage.warning('请选择入库站点')
+    return
+  }
+  if (!inboundScanForm.scan_code.trim()) {
+    ElMessage.warning('请输入订单号或包裹号')
+    return
+  }
+
+  inboundScanSubmitting.value = true
+  try {
+    const data = await http.post<never, InboundScanResponse>('/warehouse/inbound', {
+      station_id: inboundScanForm.station_id,
+      scan_code: inboundScanForm.scan_code.trim(),
+      weight: inboundScanForm.weight > 0 ? inboundScanForm.weight : undefined,
+      volume: inboundScanForm.volume > 0 ? inboundScanForm.volume : undefined,
+      remark: inboundScanForm.remark.trim(),
+    })
+    ElMessage.success(`入库成功：${data.order_no}`)
+    inboundScanVisible.value = false
+    await Promise.all([loadStations(), refreshOverview(), loadChecks()])
+    if (stationDetailVisible.value && stationDetail.value?.id === inboundScanForm.station_id) {
+      await openStationDetail(inboundScanForm.station_id)
+    }
+  } finally {
+    inboundScanSubmitting.value = false
+  }
+}
+
 async function submitEditStation() {
-  if (!editStationTargetId.value || !editStationFormRef.value) {
+  if (!editStationFormRef.value) {
     return
   }
 
@@ -1455,7 +1790,8 @@ async function submitEditStation() {
 
   editStationSubmitting.value = true
   try {
-    await http.put(`/stations/${editStationTargetId.value}`, {
+    const payload = {
+      station_code: editStationForm.station_code.trim(),
       name: editStationForm.name.trim(),
       type: editStationForm.type,
       country: editStationForm.country.trim(),
@@ -1470,16 +1806,88 @@ async function submitEditStation() {
       working_hours: editStationForm.working_hours.trim(),
       status: editStationForm.status,
       remark: editStationForm.remark.trim(),
-    })
-    ElMessage.success('站点信息已更新')
+    }
+
+    if (editStationMode.value === 'create') {
+      await http.post('/stations', payload)
+      ElMessage.success('站点已创建')
+    } else {
+      if (!editStationTargetId.value) {
+        return
+      }
+      await http.put(`/stations/${editStationTargetId.value}`, {
+        name: payload.name,
+        type: payload.type,
+        country: payload.country,
+        province: payload.province,
+        city: payload.city,
+        address: payload.address,
+        latitude: payload.latitude,
+        longitude: payload.longitude,
+        capacity: payload.capacity,
+        contact_name: payload.contact_name,
+        contact_phone: payload.contact_phone,
+        working_hours: payload.working_hours,
+        status: payload.status,
+        remark: payload.remark,
+      })
+      ElMessage.success('站点信息已更新')
+    }
     editStationVisible.value = false
     await Promise.all([loadStations(), loadStationOptions(), refreshOverview()])
-    if (stationDetailVisible.value && stationDetail.value?.id === editStationTargetId.value) {
+    if (editStationMode.value === 'edit' && stationDetailVisible.value && stationDetail.value?.id === editStationTargetId.value) {
       await openStationDetail(editStationTargetId.value)
     }
   } finally {
     editStationSubmitting.value = false
   }
+}
+
+async function submitServiceArea() {
+  if (!stationDetail.value) return
+  if (!serviceAreaForm.country.trim()) {
+    ElMessage.warning('请输入国家')
+    return
+  }
+
+  serviceAreaSubmitting.value = true
+  try {
+    const payload = {
+      country: serviceAreaForm.country.trim(),
+      province: serviceAreaForm.province.trim(),
+      city: serviceAreaForm.city.trim(),
+      district: serviceAreaForm.district.trim(),
+      priority: Number(serviceAreaForm.priority),
+      status: serviceAreaForm.status,
+      remark: serviceAreaForm.remark.trim(),
+    }
+
+    if (serviceAreaDialogMode.value === 'create') {
+      await http.post(`/manager/stations/${stationDetail.value.id}/service-areas`, payload)
+      ElMessage.success('服务范围已创建')
+    } else {
+      if (!serviceAreaTargetId.value) return
+      await http.put(`/manager/stations/${stationDetail.value.id}/service-areas/${serviceAreaTargetId.value}`, payload)
+      ElMessage.success('服务范围已更新')
+    }
+
+    serviceAreaDialogVisible.value = false
+    await openStationDetail(stationDetail.value.id)
+  } finally {
+    serviceAreaSubmitting.value = false
+  }
+}
+
+async function deleteServiceArea(area: StationServiceAreaItem) {
+  if (!stationDetail.value) return
+  await ElMessageBox.confirm(
+    `确认删除服务范围：${formatAddress(area.country, area.province, area.city, area.district)}？`,
+    '删除确认',
+    { type: 'warning' },
+  )
+  await http.delete(`/manager/stations/${stationDetail.value.id}/service-areas/${area.id}`)
+  ElMessage.success('服务范围已删除')
+  await openStationDetail(stationDetail.value.id)
 }
 
 function focusStationWarning(stationID: number) {

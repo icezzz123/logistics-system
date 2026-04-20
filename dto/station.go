@@ -64,6 +64,46 @@ type StationResponse struct {
 	MTime        int64   `json:"mtime"`
 }
 
+type CreateStationServiceAreaRequest struct {
+	Country  string `json:"country" binding:"required,max=50"`
+	Province string `json:"province" binding:"omitempty,max=50"`
+	City     string `json:"city" binding:"omitempty,max=50"`
+	District string `json:"district" binding:"omitempty,max=50"`
+	Priority int    `json:"priority" binding:"omitempty,min=1,max=10000"`
+	Status   *int   `json:"status,omitempty" binding:"omitempty,oneof=0 1"`
+	Remark   string `json:"remark" binding:"omitempty,max=500"`
+}
+
+type UpdateStationServiceAreaRequest struct {
+	Country  string `json:"country" binding:"omitempty,max=50"`
+	Province string `json:"province" binding:"omitempty,max=50"`
+	City     string `json:"city" binding:"omitempty,max=50"`
+	District string `json:"district" binding:"omitempty,max=50"`
+	Priority int    `json:"priority" binding:"omitempty,min=1,max=10000"`
+	Status   *int   `json:"status,omitempty" binding:"omitempty,oneof=0 1"`
+	Remark   string `json:"remark" binding:"omitempty,max=500"`
+}
+
+type StationServiceAreaResponse struct {
+	ID         uint   `json:"id"`
+	StationID  uint   `json:"station_id"`
+	Country    string `json:"country"`
+	Province   string `json:"province"`
+	City       string `json:"city"`
+	District   string `json:"district"`
+	Priority   int    `json:"priority"`
+	ScopeLevel string `json:"scope_level"`
+	Status     int    `json:"status"`
+	StatusName string `json:"status_name"`
+	Remark     string `json:"remark"`
+	CTime      int64  `json:"ctime"`
+	MTime      int64  `json:"mtime"`
+}
+
+type StationServiceAreaListResponse struct {
+	List []StationServiceAreaResponse `json:"list"`
+}
+
 // StationListRequest 站点列表请求
 type StationListRequest struct {
 	Page     int    `form:"page" binding:"omitempty,min=1"`
@@ -122,18 +162,18 @@ type StationInventoryQueryRequest struct {
 
 // StationInventoryItem 站点库存项
 type StationInventoryItem struct {
-	StationID        uint   `json:"station_id"`
-	StationName      string `json:"station_name"`
-	StationCode      string `json:"station_code"`
-	TotalOrders      int64  `json:"total_orders"`       // 总订单数
-	InWarehouse      int64  `json:"in_warehouse"`       // 已入库
-	Sorting          int64  `json:"sorting"`            // 分拣中
-	InTransit        int64  `json:"in_transit"`         // 运输中（当前站点）
-	CustomsClearing  int64  `json:"customs_clearing"`   // 清关中
-	DestSorting      int64  `json:"dest_sorting"`       // 目的地分拣
-	Delivering       int64  `json:"delivering"`         // 配送中
-	CapacityUsage    string `json:"capacity_usage"`     // 容量使用率
-	WarningLevel     string `json:"warning_level"`      // 预警级别：normal/warning/critical
+	StationID       uint   `json:"station_id"`
+	StationName     string `json:"station_name"`
+	StationCode     string `json:"station_code"`
+	TotalOrders     int64  `json:"total_orders"`     // 总订单数
+	InWarehouse     int64  `json:"in_warehouse"`     // 已入库
+	Sorting         int64  `json:"sorting"`          // 分拣中
+	InTransit       int64  `json:"in_transit"`       // 运输中（当前站点）
+	CustomsClearing int64  `json:"customs_clearing"` // 清关中
+	DestSorting     int64  `json:"dest_sorting"`     // 目的地分拣
+	Delivering      int64  `json:"delivering"`       // 配送中
+	CapacityUsage   string `json:"capacity_usage"`   // 容量使用率
+	WarningLevel    string `json:"warning_level"`    // 预警级别：normal/warning/critical
 }
 
 // StationInventoryResponse 站点库存响应
@@ -143,48 +183,48 @@ type StationInventoryResponse struct {
 
 // CreateInventoryCheckRequest 创建库存盘点请求
 type CreateInventoryCheckRequest struct {
-	StationID uint   `json:"station_id" binding:"required"` // 站点ID
+	StationID uint   `json:"station_id" binding:"required"`                 // 站点ID
 	CheckType string `json:"check_type" binding:"required,oneof=full spot"` // 盘点类型：full=全盘，spot=抽盘
-	Remark    string `json:"remark"` // 备注
+	Remark    string `json:"remark"`                                        // 备注
 }
 
 // CompleteInventoryCheckRequest 完成库存盘点请求
 type CompleteInventoryCheckRequest struct {
 	ActualCount int    `json:"actual_count" binding:"required,min=0"` // 实际数量
-	Remark      string `json:"remark"` // 备注
+	Remark      string `json:"remark"`                                // 备注
 }
 
 // InventoryCheckResponse 库存盘点响应
 type InventoryCheckResponse struct {
-	ID              uint                         `json:"id"`
-	CheckNo         string                       `json:"check_no"`
-	StationID       uint                         `json:"station_id"`
-	StationName     string                       `json:"station_name"`
-	CheckType       string                       `json:"check_type"`
-	CheckTypeName   string                       `json:"check_type_name"`
-	SystemCount     int                          `json:"system_count"`
-	ActualCount     int                          `json:"actual_count"`
-	DifferenceCount int                          `json:"difference_count"`
-	Status          int                          `json:"status"`
-	StatusName      string                       `json:"status_name"`
-	OperatorID      uint                         `json:"operator_id"`
-	OperatorName    string                       `json:"operator_name"`
-	CheckTime       int64                        `json:"check_time"`
-	CompleteTime    int64                        `json:"complete_time"`
-	Remark          string                       `json:"remark"`
+	ID              uint                           `json:"id"`
+	CheckNo         string                         `json:"check_no"`
+	StationID       uint                           `json:"station_id"`
+	StationName     string                         `json:"station_name"`
+	CheckType       string                         `json:"check_type"`
+	CheckTypeName   string                         `json:"check_type_name"`
+	SystemCount     int                            `json:"system_count"`
+	ActualCount     int                            `json:"actual_count"`
+	DifferenceCount int                            `json:"difference_count"`
+	Status          int                            `json:"status"`
+	StatusName      string                         `json:"status_name"`
+	OperatorID      uint                           `json:"operator_id"`
+	OperatorName    string                         `json:"operator_name"`
+	CheckTime       int64                          `json:"check_time"`
+	CompleteTime    int64                          `json:"complete_time"`
+	Remark          string                         `json:"remark"`
 	Details         []InventoryCheckDetailResponse `json:"details,omitempty"`
 }
 
 // InventoryCheckDetailResponse 库存盘点明细响应
 type InventoryCheckDetailResponse struct {
-	ID      uint   `json:"id"`
-	OrderID uint   `json:"order_id"`
-	OrderNo string `json:"order_no"`
-	Status  int    `json:"status"`
-	StatusName string `json:"status_name"`
-	IsFound int    `json:"is_found"`
+	ID          uint   `json:"id"`
+	OrderID     uint   `json:"order_id"`
+	OrderNo     string `json:"order_no"`
+	Status      int    `json:"status"`
+	StatusName  string `json:"status_name"`
+	IsFound     int    `json:"is_found"`
 	IsFoundName string `json:"is_found_name"`
-	Remark  string `json:"remark"`
+	Remark      string `json:"remark"`
 }
 
 // InventoryCheckListRequest 库存盘点列表请求
@@ -241,8 +281,8 @@ type InventoryWarningResponse struct {
 
 // InventoryWarningConfigRequest 库存预警配置请求
 type InventoryWarningConfigRequest struct {
-	StationID       uint    `json:"station_id" binding:"required"`       // 站点ID
-	WarningThreshold float64 `json:"warning_threshold" binding:"required,min=0,max=1"` // 警告阈值（0-1）
+	StationID         uint    `json:"station_id" binding:"required"`                     // 站点ID
+	WarningThreshold  float64 `json:"warning_threshold" binding:"required,min=0,max=1"`  // 警告阈值（0-1）
 	CriticalThreshold float64 `json:"critical_threshold" binding:"required,min=0,max=1"` // 严重阈值（0-1）
 }
 
@@ -254,12 +294,13 @@ type InventoryWarningConfig struct {
 	CriticalThreshold float64 `json:"critical_threshold"` // 严重阈值
 	IsEnabled         bool    `json:"is_enabled"`         // 是否启用预警
 }
+
 // InventoryStatsRequest 库存统计请求
 type InventoryStatsRequest struct {
-	StationID uint   `form:"station_id"` // 站点ID，0表示所有站点
+	StationID uint   `form:"station_id"`                               // 站点ID，0表示所有站点
 	DateType  string `form:"date_type" binding:"oneof=day week month"` // 统计类型：day=日统计，week=周统计，month=月统计
-	StartDate string `form:"start_date"` // 开始日期 YYYY-MM-DD
-	EndDate   string `form:"end_date"`   // 结束日期 YYYY-MM-DD
+	StartDate string `form:"start_date"`                               // 开始日期 YYYY-MM-DD
+	EndDate   string `form:"end_date"`                                 // 结束日期 YYYY-MM-DD
 }
 
 // InventoryStatsResponse 库存统计响应
@@ -282,15 +323,15 @@ type InventoryStatsSummary struct {
 
 // InventoryTrendItem 库存趋势项
 type InventoryTrendItem struct {
-	Date         string  `json:"date"`          // 日期
-	TotalOrders  int64   `json:"total_orders"`  // 总订单数
-	AvgUsage     float64 `json:"avg_usage"`     // 平均使用率
-	MaxUsage     float64 `json:"max_usage"`     // 最高使用率
-	MinUsage     float64 `json:"min_usage"`     // 最低使用率
-	InWarehouse  int64   `json:"in_warehouse"`  // 已入库数量
-	Sorting      int64   `json:"sorting"`       // 分拣中数量
-	InTransit    int64   `json:"in_transit"`    // 运输中数量
-	Delivering   int64   `json:"delivering"`    // 配送中数量
+	Date        string  `json:"date"`         // 日期
+	TotalOrders int64   `json:"total_orders"` // 总订单数
+	AvgUsage    float64 `json:"avg_usage"`    // 平均使用率
+	MaxUsage    float64 `json:"max_usage"`    // 最高使用率
+	MinUsage    float64 `json:"min_usage"`    // 最低使用率
+	InWarehouse int64   `json:"in_warehouse"` // 已入库数量
+	Sorting     int64   `json:"sorting"`      // 分拣中数量
+	InTransit   int64   `json:"in_transit"`   // 运输中数量
+	Delivering  int64   `json:"delivering"`   // 配送中数量
 }
 
 // InventoryStationStats 站点库存统计
@@ -311,8 +352,8 @@ type InventoryStationStats struct {
 
 // InventoryDistributionResponse 库存分布响应
 type InventoryDistributionResponse struct {
-	StatusDistribution []StatusDistributionItem `json:"status_distribution"` // 状态分布
-	StationDistribution []StationDistributionItem `json:"station_distribution"` // 站点分布
+	StatusDistribution   []StatusDistributionItem   `json:"status_distribution"`   // 状态分布
+	StationDistribution  []StationDistributionItem  `json:"station_distribution"`  // 站点分布
 	CapacityDistribution []CapacityDistributionItem `json:"capacity_distribution"` // 容量分布
 }
 

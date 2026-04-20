@@ -36,6 +36,66 @@ func TestAssignVehicleIntegration(t *testing.T) {
 	}
 }
 
+func TestTransportUnifiedScanUsesTaskNoAndParcelNo(t *testing.T) {
+	db := testutil.EnsureTestDB(t)
+	service := NewTransportService()
+	driver := testutil.CreateTestUser(t, models.RoleDriver)
+	vehicle := testutil.CreateTestVehicle(t, driver.ID)
+	station := testutil.CreateTestStation(t, models.StationTransit)
+	customer := testutil.CreateTestUser(t, models.RoleCustomer)
+	order := testutil.CreateTestOrder(t, customer.ID, models.OrderSorting)
+
+	task := &models.TransportTask{
+		TaskNo:     "T-SCAN-TEST-001",
+		OrderID:    order.ID,
+		VehicleID:  vehicle.ID,
+		DriverID:   driver.ID,
+		StartPoint: "上海",
+		EndPoint:   "苏州",
+		Status:     "pending",
+	}
+	if err := db.Create(task).Error; err != nil {
+		t.Fatalf("create transport task failed: %v", err)
+	}
+	t.Cleanup(func() { _ = db.Where("id = ?", task.ID).Delete(&models.TransportTask{}).Error })
+
+	var pkg models.OrderPackage
+	if err := db.Where("order_id = ?", order.ID).First(&pkg).Error; err != nil {
+		t.Fatalf("query order package failed: %v", err)
+	}
+
+	loadResp, err := service.LoadScanByCode(driver.ID, int(models.RoleDriver), &dto.TransportScanRequest{
+		TaskNo:    task.TaskNo,
+		ScanCode:  pkg.ParcelNo,
+		StationID: station.ID,
+		Remark:    "统一扫码装车",
+	})
+	if err != nil {
+		t.Fatalf("load scan by code failed: %v", err)
+	}
+	if loadResp.TaskNo != task.TaskNo {
+		t.Fatalf("expected task no %s, got %s", task.TaskNo, loadResp.TaskNo)
+	}
+	if loadResp.ParcelNo != pkg.ParcelNo {
+		t.Fatalf("expected parcel no %s, got %s", pkg.ParcelNo, loadResp.ParcelNo)
+	}
+
+	unloadResp, err := service.UnloadScanByCode(driver.ID, int(models.RoleDriver), &dto.TransportScanRequest{
+		ScanCode:  order.OrderNo,
+		StationID: station.ID,
+		Remark:    "统一扫码卸车",
+	})
+	if err != nil {
+		t.Fatalf("unload scan by code failed: %v", err)
+	}
+	if unloadResp.OrderNo != order.OrderNo {
+		t.Fatalf("expected order no %s, got %s", order.OrderNo, unloadResp.OrderNo)
+	}
+	if unloadResp.ScanCodeType == "" {
+		t.Fatal("expected scan code type to be set")
+	}
+}
+
 func TestDispatchOptimizeRouteIntegration(t *testing.T) {
 	db := testutil.EnsureTestDB(t)
 	service := NewDispatchService()

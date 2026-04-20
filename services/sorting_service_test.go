@@ -14,9 +14,12 @@ func TestSortingRouteMatchAndScanFlowIntegration(t *testing.T) {
 	sorter := testutil.CreateTestUser(t, models.RoleSorter)
 	customer := testutil.CreateTestUser(t, models.RoleCustomer)
 	order := testutil.CreateTestOrder(t, customer.ID, models.OrderInWarehouse)
-	order.ReceiverCountry = "中国"
-	order.ReceiverProvince = "江苏"
-	order.ReceiverCity = "苏州"
+	receiverCountry := testutil.Unique("country")
+	receiverProvince := testutil.Unique("province")
+	receiverCity := testutil.Unique("city")
+	order.ReceiverCountry = receiverCountry
+	order.ReceiverProvince = receiverProvince
+	order.ReceiverCity = receiverCity
 	if err := db.Model(&models.Order{}).Where("id = ?", order.ID).Updates(map[string]interface{}{
 		"receiver_country":  order.ReceiverCountry,
 		"receiver_province": order.ReceiverProvince,
@@ -27,9 +30,9 @@ func TestSortingRouteMatchAndScanFlowIntegration(t *testing.T) {
 
 	rule := &models.SortingRule{
 		RuleName:    testutil.Unique("sorting_rule"),
-		Country:     "中国",
-		Province:    "江苏",
-		City:        "苏州",
+		Country:     receiverCountry,
+		Province:    receiverProvince,
+		City:        receiverCity,
 		District:    "",
 		RouteCode:   testutil.Unique("R"),
 		StationID:   targetStation.ID,
@@ -55,7 +58,12 @@ func TestSortingRouteMatchAndScanFlowIntegration(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = db.Where("id = ?", task.ID).Delete(&models.SortingTask{}).Error })
 
-	matchResp, err := service.MatchRoute(&dto.RouteMatchRequest{Country: "中国", Province: "江苏", City: "苏州", District: ""})
+	matchResp, err := service.MatchRoute(&dto.RouteMatchRequest{
+		Country:  receiverCountry,
+		Province: receiverProvince,
+		City:     receiverCity,
+		District: "",
+	})
 	if err != nil {
 		t.Fatalf("match route failed: %v", err)
 	}
@@ -63,7 +71,17 @@ func TestSortingRouteMatchAndScanFlowIntegration(t *testing.T) {
 		t.Fatalf("expected route match to target station %d, got matched=%v station=%d", targetStation.ID, matchResp.Matched, matchResp.StationID)
 	}
 
-	scanResp, err := service.SortingScan(&dto.SortingScanRequest{OrderNo: order.OrderNo, StationID: targetStation.ID, TaskID: task.ID, Remark: "自动化测试扫描"}, sorter.ID)
+	var pkg models.OrderPackage
+	if err := db.Where("order_id = ?", order.ID).First(&pkg).Error; err != nil {
+		t.Fatalf("query order package failed: %v", err)
+	}
+
+	scanResp, err := service.SortingScanByCode(&dto.SortingScanRequest{
+		ScanCode:  pkg.ParcelNo,
+		StationID: targetStation.ID,
+		TaskCode:  task.TaskNo,
+		Remark:    "自动化测试扫描",
+	}, sorter.ID)
 	if err != nil {
 		t.Fatalf("sorting scan failed: %v", err)
 	}
@@ -73,6 +91,12 @@ func TestSortingRouteMatchAndScanFlowIntegration(t *testing.T) {
 	if scanResp.OrderNo != order.OrderNo {
 		t.Fatalf("expected scan response order no %s, got %s", order.OrderNo, scanResp.OrderNo)
 	}
+	if scanResp.ParcelNo != pkg.ParcelNo {
+		t.Fatalf("expected scan response parcel no %s, got %s", pkg.ParcelNo, scanResp.ParcelNo)
+	}
+	if scanResp.TaskNo != task.TaskNo {
+		t.Fatalf("expected scan response task no %s, got %s", task.TaskNo, scanResp.TaskNo)
+	}
 
 	updatedTask, err := service.GetSortingTaskByID(task.ID)
 	if err != nil {
@@ -80,5 +104,19 @@ func TestSortingRouteMatchAndScanFlowIntegration(t *testing.T) {
 	}
 	if updatedTask.SortedCount != 1 {
 		t.Fatalf("expected sorted count 1, got %d", updatedTask.SortedCount)
+	}
+
+	orderService := NewOrderService()
+	updatedOrder, err := orderService.GetOrderByID(order.ID)
+	if err != nil {
+		t.Fatalf("get updated order failed: %v", err)
+	}
+	if updatedOrder.Status != models.OrderSorting {
+		t.Fatalf("expected order status sorting after scan, got %v", updatedOrder.Status)
+	}
+
+	var statusLog models.OrderStatusLog
+	if err := db.Where("order_id = ? AND from_status = ? AND to_status = ?", order.ID, models.OrderInWarehouse, models.OrderSorting).First(&statusLog).Error; err != nil {
+		t.Fatalf("expected auto status log from in_warehouse to sorting, got error: %v", err)
 	}
 }

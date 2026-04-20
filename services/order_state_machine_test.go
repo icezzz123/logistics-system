@@ -11,6 +11,12 @@ func TestOrderStateMachineValidateTransition(t *testing.T) {
 	if err := sm.ValidateTransition(models.OrderPending, models.OrderAccepted, 6); err != nil {
 		t.Fatalf("expected dispatcher to accept order, got error: %v", err)
 	}
+	if err := sm.ValidateTransition(models.OrderAccepted, models.OrderPickupPending, 6); err != nil {
+		t.Fatalf("expected dispatcher to move accepted order into pickup pending, got error: %v", err)
+	}
+	if err := sm.ValidateTransition(models.OrderPickupPending, models.OrderPickingUp, 2); err != nil {
+		t.Fatalf("expected courier to start pickup, got error: %v", err)
+	}
 	if err := sm.ValidateTransition(models.OrderPending, models.OrderAccepted, 1); err == nil {
 		t.Fatal("expected customer to be blocked from accepting order")
 	}
@@ -33,6 +39,11 @@ func TestOrderStateMachineAllowedTransitions(t *testing.T) {
 	allowedForDispatcher := sm.GetAllowedTransitions(models.OrderException, 6)
 	if len(allowedForDispatcher) == 0 {
 		t.Fatal("expected dispatcher to have recovery transitions from exception")
+	}
+
+	allowedForCourierPickup := sm.GetAllowedTransitions(models.OrderPickupPending, 2)
+	if !containsOrderStatus(allowedForCourierPickup, models.OrderPickingUp) || !containsOrderStatus(allowedForCourierPickup, models.OrderException) {
+		t.Fatalf("expected courier to be allowed to move pickup pending orders to picking up and exception, got %#v", allowedForCourierPickup)
 	}
 
 	allowedForSigned := sm.GetAllowedTransitions(models.OrderSigned, 7)

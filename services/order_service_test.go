@@ -5,6 +5,8 @@ import (
 	"logistics-system/models"
 	"logistics-system/testutil"
 	"testing"
+
+	"gorm.io/gorm"
 )
 
 func TestOrderServiceCoreCalculations(t *testing.T) {
@@ -42,10 +44,11 @@ func TestOrderServiceCoreCalculations(t *testing.T) {
 }
 
 func TestCreateOrderAndUpdateStatusFlowIntegration(t *testing.T) {
-	testutil.EnsureTestDB(t)
+	db := testutil.EnsureTestDB(t)
 	service := NewOrderService()
 	customer := testutil.CreateTestUser(t, models.RoleCustomer)
 	admin := testutil.CreateTestUser(t, models.RoleAdmin)
+	testutil.CreateTestStation(t, models.StationOrigin)
 
 	req := &dto.CreateOrderRequest{
 		SenderName:       "测试发件人",
@@ -78,11 +81,22 @@ func TestCreateOrderAndUpdateStatusFlowIntegration(t *testing.T) {
 	}
 	t.Cleanup(func() { testutil.CleanupOrderData(t, order.ID) })
 
-	if order.Status != models.OrderPending {
-		t.Fatalf("expected initial status pending, got %v", order.Status)
+	if order.Status != models.OrderPickupPending {
+		t.Fatalf("expected initial status pickup pending, got %v", order.Status)
 	}
 
-	for _, step := range []int{int(models.OrderAccepted), int(models.OrderInWarehouse), int(models.OrderSorting)} {
+	var pickupTaskCount int64
+	if err := db.Model(&models.PickupTask{}).Where("order_id = ?", order.ID).Count(&pickupTaskCount).Error; err != nil {
+		t.Fatalf("count pickup tasks failed: %v", err)
+	}
+	if pickupTaskCount != 1 {
+		t.Fatalf("expected 1 auto-created pickup task, got %d", pickupTaskCount)
+	}
+	if order.OriginStationID == 0 {
+		t.Fatal("expected origin station to be auto assigned")
+	}
+
+	for _, step := range []int{int(models.OrderPickingUp), int(models.OrderPickedUp), int(models.OrderInWarehouse), int(models.OrderSorting)} {
 		if err := service.UpdateOrderStatus(order.ID, step, admin.ID, int(models.RoleAdmin), "自动化测试推进状态"); err != nil {
 			t.Fatalf("update order status to %d failed: %v", step, err)
 		}
@@ -100,8 +114,8 @@ func TestCreateOrderAndUpdateStatusFlowIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get order status logs failed: %v", err)
 	}
-	if len(logs) < 3 {
-		t.Fatalf("expected at least 3 status logs, got %d", len(logs))
+	if len(logs) < 6 {
+		t.Fatalf("expected at least 6 status logs, got %d", len(logs))
 	}
 }
 
@@ -109,6 +123,7 @@ func TestCreateOrderWithPackagesCreatesMultipleParcels(t *testing.T) {
 	testutil.EnsureTestDB(t)
 	service := NewOrderService()
 	customer := testutil.CreateTestUser(t, models.RoleCustomer)
+	testutil.CreateTestStation(t, models.StationOrigin)
 
 	req := &dto.CreateOrderRequest{
 		SenderName:       "测试发件人",
@@ -160,10 +175,146 @@ func TestCreateOrderWithPackagesCreatesMultipleParcels(t *testing.T) {
 	}
 }
 
+func TestCreateOrderDoesNotCrossProvinceAutoAssignPickupStation(t *testing.T) {
+	db := testutil.EnsureTestDB(t)
+	service := NewOrderService()
+	customer := testutil.CreateTestUser(t, models.RoleCustomer)
+	testutil.CreateTestStation(t, models.StationOrigin)
+
+	order, err := service.CreateOrder(customer.ID, &dto.CreateOrderRequest{
+		SenderName:       "福建发件人",
+		SenderPhone:      "13812345678",
+		SenderCountry:    "中国",
+		SenderProvince:   "福建",
+		SenderCity:       "福州",
+		SenderAddress:    "福州测试路1号",
+		SenderPostcode:   "350000",
+		ReceiverName:     "苏州收件人",
+		ReceiverPhone:    "13912345678",
+		ReceiverCountry:  "中国",
+		ReceiverProvince: "江苏",
+		ReceiverCity:     "苏州",
+		ReceiverAddress:  "苏州测试路8号",
+		ReceiverPostcode: "215000",
+		GoodsName:        "跨省校验货物",
+		GoodsCategory:    "文件",
+		GoodsWeight:      1.5,
+		GoodsVolume:      0.1,
+		GoodsQuantity:    1,
+		GoodsValue:       50,
+		TransportMode:    3,
+		ServiceType:      "standard",
+	})
+	if err != nil {
+		t.Fatalf("create order failed: %v", err)
+	}
+	t.Cleanup(func() { testutil.CleanupOrderData(t, order.ID) })
+
+	if order.Status != models.OrderPending {
+		t.Fatalf("expected order to stay pending without province-matched origin station, got %v", order.Status)
+	}
+	if order.OriginStationID != 0 {
+		t.Fatalf("expected origin station to stay empty, got %d", order.OriginStationID)
+	}
+
+	var pickupTaskCount int64
+	if err := db.Model(&models.PickupTask{}).Where("order_id = ?", order.ID).Count(&pickupTaskCount).Error; err != nil {
+		t.Fatalf("count pickup tasks failed: %v", err)
+	}
+	if pickupTaskCount != 0 {
+		t.Fatalf("expected no auto-created pickup task, got %d", pickupTaskCount)
+	}
+
+	var statusLogs []models.OrderStatusLog
+	if err := db.Where("order_id = ?", order.ID).Find(&statusLogs).Error; err != nil && err != gorm.ErrRecordNotFound {
+		t.Fatalf("query order status logs failed: %v", err)
+	}
+	if len(statusLogs) != 0 {
+		t.Fatalf("expected no auto status logs when station is unresolved, got %d", len(statusLogs))
+	}
+}
+
+func TestCreateOrderAutoAssignsPickupStationByServiceArea(t *testing.T) {
+	db := testutil.EnsureTestDB(t)
+	service := NewOrderService()
+	customer := testutil.CreateTestUser(t, models.RoleCustomer)
+
+	beijing := testutil.CreateTestStation(t, models.StationOrigin)
+	shenzhen := testutil.CreateTestStation(t, models.StationOrigin)
+
+	if err := db.Model(&models.Station{}).Where("id = ?", beijing.ID).Updates(map[string]interface{}{
+		"station_code": "TEST-BJ-OR",
+		"name":         "北京始发测试站",
+		"province":     "北京市",
+		"city":         "北京",
+	}).Error; err != nil {
+		t.Fatalf("update beijing station failed: %v", err)
+	}
+	if err := db.Model(&models.Station{}).Where("id = ?", shenzhen.ID).Updates(map[string]interface{}{
+		"station_code": "TEST-SZ-OR",
+		"province":     "广东",
+		"city":         "深圳",
+	}).Error; err != nil {
+		t.Fatalf("update shenzhen station failed: %v", err)
+	}
+
+	serviceArea := &models.StationServiceArea{
+		StationID: shenzhen.ID,
+		Country:   "中国",
+		Province:  "福建",
+		Priority:  300,
+		Status:    1,
+		Remark:    "福建由深圳始发站承接",
+	}
+	if err := db.Create(serviceArea).Error; err != nil {
+		t.Fatalf("create station service area failed: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = db.Where("id = ?", serviceArea.ID).Delete(&models.StationServiceArea{}).Error
+	})
+
+	order, err := service.CreateOrder(customer.ID, &dto.CreateOrderRequest{
+		SenderName:       "福建发件人",
+		SenderPhone:      "13812345678",
+		SenderCountry:    "中国",
+		SenderProvince:   "福建",
+		SenderCity:       "福州",
+		SenderAddress:    "福州测试路1号",
+		SenderPostcode:   "350000",
+		ReceiverName:     "上海收件人",
+		ReceiverPhone:    "13912345678",
+		ReceiverCountry:  "中国",
+		ReceiverProvince: "上海",
+		ReceiverCity:     "上海",
+		ReceiverAddress:  "上海测试路8号",
+		ReceiverPostcode: "200000",
+		GoodsName:        "服务范围货物",
+		GoodsCategory:    "文件",
+		GoodsWeight:      1.2,
+		GoodsVolume:      0.1,
+		GoodsQuantity:    1,
+		GoodsValue:       80,
+		TransportMode:    3,
+		ServiceType:      "standard",
+	})
+	if err != nil {
+		t.Fatalf("create order failed: %v", err)
+	}
+	t.Cleanup(func() { testutil.CleanupOrderData(t, order.ID) })
+
+	if order.OriginStationID != shenzhen.ID {
+		t.Fatalf("expected order to match shenzhen station %d by service area, got %d", shenzhen.ID, order.OriginStationID)
+	}
+	if order.Status != models.OrderPickupPending {
+		t.Fatalf("expected order status pickup pending, got %v", order.Status)
+	}
+}
+
 func TestSplitOrderCreatesChildOrdersAndMovesPackages(t *testing.T) {
 	testutil.EnsureTestDB(t)
 	service := NewOrderService()
 	customer := testutil.CreateTestUser(t, models.RoleCustomer)
+	testutil.CreateTestStation(t, models.StationOrigin)
 
 	order, err := service.CreateOrder(customer.ID, &dto.CreateOrderRequest{
 		SenderName:       "测试发件人",
@@ -239,6 +390,7 @@ func TestMergeOrdersCreatesParentOrder(t *testing.T) {
 	testutil.EnsureTestDB(t)
 	service := NewOrderService()
 	customer := testutil.CreateTestUser(t, models.RoleCustomer)
+	testutil.CreateTestStation(t, models.StationOrigin)
 
 	createReq := func(name string, value float64) *dto.CreateOrderRequest {
 		return &dto.CreateOrderRequest{
